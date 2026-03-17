@@ -7,7 +7,10 @@ kind: Service
 metadata:
   creationTimestamp: "2026-02-03T12:22:57Z"
   labels:
+    # start: nye labels lagt til (person 4)
     app: allpodd
+    tier: frontend
+    # slutt: nye labels lagt til (person 4)
   name: allpodd
 spec:
   ports:
@@ -28,7 +31,10 @@ kind: Pod
 metadata:
   creationTimestamp: "2026-02-03T12:22:57Z"
   labels:
+    # start: nye labels lagt til (person 4)
     app: allpodd
+    tier: backend
+    # slutt: nye labels lagt til (person 4)
   name: allpodd
 spec:
   containers:
@@ -51,6 +57,11 @@ spec:
     name: bidrag-db
     stdin: true
     tty: true
+    # start: volumeMounts lagt til (person 4)
+    volumeMounts:
+    - mountPath: /var/www
+      name: bidrag-volume
+    # slutt: volumeMounts lagt til (person 4)
   - env:
     - name: TERM
       value: xterm
@@ -59,6 +70,11 @@ spec:
     name: pseudonym-db
     stdin: true
     tty: true
+    # start: volumeMounts lagt til (person 4)
+    volumeMounts:
+    - mountPath: /var/www
+      name: pseudonym-volume
+    # slutt: volumeMounts lagt til (person 4)
   - env:
     - name: TERM
       value: xterm
@@ -67,3 +83,12 @@ spec:
     name: web
     stdin: true
     tty: true
+  # start: volumes lagt til (person 4)
+    volumes:
+    - name: bidrag-volume
+      persistentVolumeClaim:
+        claimName: bidrag-pvc
+    - name: pseudonym-volume
+      persistentVolumeClaim:
+        claimName: pseudonym-pvc
+    # slutt: volumes lagt til (person 4)

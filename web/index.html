@@ -2,36 +2,37 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>BIDRAG</title>
+    <title>BIDRAG1</title>
+    <link rel="stylesheet" href="style.css">
   </head>
   <body>
     <form action='http://localhost:8081' method='post'>
-      <table>
-	<tr>
-	  <td> E-post </td>
-	  <td> <input name='epost' type='text' id='epost'> </td>
-	</tr>  
-	<tr>   
-	  <td> Passord </td>
-	  <td> <input name='passord' type='text' id='passord'> </td>
-	</tr>
-	<tr>   
-	  <td> Tittel </td>
-	  <td> <input name='tittel' type='text' id='tittel' > </td>
-	</tr>  
-	<tr>   
-	  <td> Kommentar </td>
-	  <td> <textarea name='kommentar' id='kommentar' > </textarea> </td>
-	</tr>
-	<tr>   
-	  <td> Tekst </td>
-	  <td> <textarea name='tekst' id='tekst' > </textarea> </td>
-	</tr>
-      <br/>
-      <input type='submit' name='handling' value='Endre' >
-      <input type='submit' name='handling' value='Slett' >
-      <input type='submit' name='handling' value='Ny'    >
-      <input type='submit' name='handling' value='Liste' >
+      <div class="buttons">
+        <input type='submit' name='handling' value='Ny' id='ny-btn'>
+        <input type='submit' name='handling' value='Endre' id='endre-btn'>
+        <input type='submit' name='handling' value='Slett' id='slett-btn'>
+        <input type='submit' name='handling' value='Liste' id='liste-btn'>
+      </div>
+      <div class="field">
+        <label for="epost">E-post</label>
+        <input name='epost' type='text' id='epost'>
+      </div>
+      <div class="field">
+        <label for="passord">Passord</label>
+        <input name='passord' type='text' id='passord'>
+      </div>
+      <div class="field">
+        <label for="tittel">Tittel</label>
+        <input name='tittel' type='text' id='tittel'>
+      </div>
+      <div class="field">
+        <label for="kommentar">Kommentar</label>
+        <textarea name='kommentar' id='kommentar'></textarea>
+      </div>
+      <div class="field">
+        <label for="tekst">Tekst</label>
+        <textarea name='tekst' id='tekst'></textarea>
+      </div>
     </form>      
     <br/>
   </body>
