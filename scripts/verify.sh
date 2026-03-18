@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Verify script for Allpodd system (person 5)
+# start: Verifikasjonsskript for lokal testing med Podman - oppfyller NF3 (utvikling og testing lokalt pa studentenes egne maskiner ved hjelp av podman) (person 5)
+# Skript som automatisk kontrollerer at alle systemkomponenter er oppe og fungerer (person 5)
 
 echo "Starting verification of Allpodd system..."
 
@@ -42,5 +43,4 @@ fi
 
 echo "Verification complete."
 
-# start: QA-skript lagt til (person 5)
-# slutt: QA-skript lagt til (person 5)
+# slutt: Verifikasjonsskript for lokal testing med Podman - oppfyller NF3 (utvikling og testing lokalt pa studentenes egne maskiner ved hjelp av podman) (person 5)
