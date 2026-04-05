@@ -2,34 +2,6 @@
 
 DB=../bidrag.db
 
-# start: Public anonym listing og innholdsfiltrering - oppfyller F1 (offentlig tittel og tekst, privat kommentar), F2 (anonym public view) og NF1 (integritet i output) (person 2)
-vis_offentlig_liste() {
-    sqlite3 -line "$DB" "
-        SELECT
-            coalesce(trim(tittel), '') AS tittel,
-            coalesce(trim(tekst), '') AS tekst
-        FROM Bidrag
-        WHERE length(trim(coalesce(tittel, ''))) > 0
-           OR length(trim(coalesce(tekst, ''))) > 0
-        ORDER BY rowid DESC
-    "
-}
-# slutt: Public anonym listing og innholdsfiltrering - oppfyller F1 (offentlig tittel og tekst, privat kommentar), F2 (anonym public view) og NF1 (integritet i output) (person 2)
-
-# start: Redusert logging av innholdsoperasjoner - oppfyller NF1 (dataminimering og konfidensialitet i backend-logikk) (person 2)
-logg_innholdsoperasjon() {
-    HAR_TITTEL=nei
-    HAR_TEKST=nei
-    HAR_KOMMENTAR=nei
-
-    if [ -n "$T" ]; then HAR_TITTEL=ja; fi
-    if [ -n "$X" ]; then HAR_TEKST=ja; fi
-    if [ -n "$K" ]; then HAR_KOMMENTAR=ja; fi
-
-    echo "bidrag-db mottok $REQUEST_METHOD (tittel=$HAR_TITTEL, tekst=$HAR_TEKST, kommentar=$HAR_KOMMENTAR)" >&2
-}
-# slutt: Redusert logging av innholdsoperasjoner - oppfyller NF1 (dataminimering og konfidensialitet i backend-logikk) (person 2)
-
 # Skriver slutten av HTTP-hodet og en tom linje
 cat <<EOF
 Access-Control-Allow-Origin: http://localhost:8080
@@ -41,11 +13,11 @@ Content-Type:text/plain;charset=utf-8
 EOF
 
 
-# Omgar bug i httpd
+# Omgår bug i httpd
 CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 
 if [ "$REQUEST_METHOD" = "GET" ]; then
-    vis_offentlig_liste
+    sqlite3 -line $DB "SELECT tittel, tekst FROM  Bidrag"
     exit
 
 elif [ "$REQUEST_METHOD" = "OPTIONS" ]; then
@@ -54,14 +26,15 @@ elif [ "$REQUEST_METHOD" = "OPTIONS" ]; then
 else
     KR=$(head -c "$CONTENT_LENGTH" )
 
+    # Til loggen (kubctl logs pods/allpodd -c bidrag-db -f)
+    echo bidrag-db fikk dette i kroppen: $KR >&2
+
     N=$( echo "$KR" | xmllint --xpath "/bidrag/navn/text()"             - 2>/dev/null)
     P=$( echo "$KR" | xmllint --xpath "/bidrag/passord/text()"          - 2>/dev/null)
     K=$( echo "$KR" | xmllint --xpath "/bidrag/kommentar/text()"        - 2>/dev/null)
     O=$( echo "$KR" | xmllint --xpath "/bidrag/offentlig_nokkel/text()" - 2>/dev/null)
     T=$( echo "$KR" | xmllint --xpath "/bidrag/tittel/text()"           - 2>/dev/null)
     X=$( echo "$KR" | xmllint --xpath "/bidrag/tekst/text()"            - 2>/dev/null)
-
-    logg_innholdsoperasjon
 
 fi
 
