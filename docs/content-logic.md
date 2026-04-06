@@ -35,7 +35,7 @@ I tillegg håndheves følgende:
 - SQL-strenger escapes før de settes inn i SQLite-spørringer
 - logging inneholder bare metadata om felter finnes eller ikke, ikke selve innholdet
 
-## API-kontrakt
+## API
 
 ### Opprette bidrag
 - `POST`
