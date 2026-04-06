@@ -1,6 +1,6 @@
 # Innhold og visninger for bidrag-db (Person 2)
 
-## Kravdekning
+## Funksjonelle krav
 
 ### F1 – offentlig tittel/tekst, privat kommentar
 - `GET` uten parametere returnerer bare `tittel` og `tekst`.
