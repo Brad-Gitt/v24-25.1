@@ -57,12 +57,6 @@ I tillegg håndheves følgende:
 - `GET ?visning=admin` → pseudonymisert adminliste
 - `GET ?visning=min&navn=...&passord=...` → brukerens egen visning
 
-## Viktig avgrensning mot andre deler av gruppen
-- Denne delen håndterer **innholdsregler og visningsregler i backend**.
-- Frontend for å presentere offentlig/admin/min-visning hører naturlig sammen med **Person 3**.
-- Ruting og identifisering med e-post/passord ligger tett opp mot **Person 1**.
-- Persistenstesting mot restart og PVC ligger hos **Person 4**.
-
 ## Testforslag
 
 ### 1. Offentlig anonym liste
