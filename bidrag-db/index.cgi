@@ -100,7 +100,6 @@ vis_min_visning() {
     PN_SQL=$(sql_escape "$1")
     sqlite3 -line "$DB" "
         SELECT
-            pseudonym AS pseudonym,
             coalesce(trim(tittel), '') AS tittel,
             coalesce(trim(tekst), '') AS tekst,
             coalesce(kommentar, '') AS kommentar
@@ -123,7 +122,6 @@ logg_innholdsoperasjon() {
 }
 # slutt: Person 2 – innhold + visninger (F1, F2, NF1)
 
-# Skriver slutten av HTTP-hodet og en tom linje
 cat <<EOF
 Access-Control-Allow-Origin: http://localhost:8080
 Access-Control-Allow-Credentials: true
@@ -133,7 +131,6 @@ Content-Type:text/plain;charset=utf-8
 
 EOF
 
-# Omgar bug i httpd
 CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 
 if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
@@ -143,7 +140,11 @@ fi
 if [ "$REQUEST_METHOD" = "GET" ]; then
     VISNING=$(url_param visning)
 
-    if [ -z "$VISNING" ] || [ "$VISNING" = "offentlig" ]; then
+    if [ -z "$VISNING" ]; then
+        VISNING=$(url_param handling)
+    fi
+
+    if [ -z "$VISNING" ] || [ "$VISNING" = "offentlig" ] || [ "$VISNING" = "Liste" ]; then
         vis_offentlig_liste
         exit
     fi
@@ -153,7 +154,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         exit
     fi
 
-    if [ "$VISNING" = "min" ]; then
+    if [ "$VISNING" = "min" ] || [ "$VISNING" = "Min" ]; then
         N=$(url_param navn)
         P=$(url_param passord)
 
@@ -172,17 +173,44 @@ fi
 KR=$(head -c "$CONTENT_LENGTH")
 
 N=$(xml_felt navn)
+N=$(trim "$N") # Person 1 fjernet whitespace fra pseudonym så DB matcher
+echo "DEBUG navn=$N" >&2
 P=$(xml_felt passord)
 K=$(xml_felt kommentar)
 O=$(xml_felt offentlig_nokkel)
 T=$(xml_felt tittel)
 X=$(xml_felt tekst)
+HND=$(xml_felt handling)
 
 logg_innholdsoperasjon
+
+if [ "$HND" = "Min" ]; then
+    if autentiser_bidragseier "$N" "$P"; then
+        vis_min_visning "$N"
+    else
+        echo "Autentisering feilet."
+    fi
+    exit
+fi
+
+if [ "$HND" = "Liste" ]; then
+    vis_offentlig_liste
+    exit
+fi
+
+if [ "$HND" = "Admin" ]; then
+    vis_admin_liste
+    exit
+fi
 
 if [ -z "$N" ]; then
     echo "Pseudonym mangler!"
     exit
+fi
+
+if [ "$REQUEST_METHOD" = "POST" ]; then
+    if [ "$HND" = "Slett" ]; then REQUEST_METHOD="DELETE"; fi
+    if [ "$HND" = "Endre" ]; then REQUEST_METHOD="PUT"; fi
 fi
 
 if [ "$REQUEST_METHOD" = "POST" ]; then
@@ -200,10 +228,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             exit
         fi
 
-        # Lager et tilfeldig 11-sifret tall som salt (POSIX-vennlig)
         S=$(tr -dc '0-9' </dev/urandom | head -c 11)
-
-        # Lager en hashverdi av det skapte saltet og det innsendte passordet
         H=$(mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d$)
 
         sqlite3 "$DB" "
@@ -214,18 +239,13 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     exit
 fi
 
-# Henter lagret saltverdi
 N_SQL=$(sql_escape "$N")
 S=$(sqlite3 "$DB" "SELECT salt FROM Bidrag WHERE pseudonym='$N_SQL'")
 if [ -z "$S" ]; then echo "Salt mangler" ; exit; fi
 
-# Beregner hashverdi av innsendt passord
 H1=$(mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d$)
-
-# Sammenligner med lagret hashverdi
 H2=$(sqlite3 "$DB" "SELECT passordhash FROM Bidrag WHERE pseudonym='$N_SQL'")
 
-# Avslutter om hashverdiene ikke er like 
 if [ "$H1" != "$H2" ]; then echo "Feil passord!" >&2 ; exit; fi
 
 if [ "$REQUEST_METHOD" = "DELETE" ]; then

@@ -6,34 +6,44 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    <form action='http://localhost:8081' method='post'>
+    <form action="http://localhost:8081/cgi-bin/index.cgi" method="post"> <!-- fikset url -->
+
       <div class="buttons">
-        <input type='submit' name='handling' value='Ny' id='ny-btn'>
-        <input type='submit' name='handling' value='Endre' id='endre-btn'>
-        <input type='submit' name='handling' value='Slett' id='slett-btn'>
-        <input type='submit' name='handling' value='Liste' id='liste-btn'>
+        <input type="submit" name="handling" value="Ny" id="ny-btn">
+        <input type="submit" name="handling" value="Endre" id="endre-btn">
+        <input type="submit" name="handling" value="Slett" id="slett-btn">
+        <input type="submit" name="handling" value="Liste" id="liste-btn">
+        <input type="submit" name="handling" value="Min" id="min-btn"> <!-- la til min -->
+        <input type="submit" name="handling" value="Admin" id="admin-btn"> <!-- la til admin knapp for admin-visning -->
       </div>
+
       <div class="field">
         <label for="epost">E-post</label>
-        <input name='epost' type='text' id='epost'>
+        <input name="epost" type="text" id="epost">
       </div>
+
       <div class="field">
         <label for="passord">Passord</label>
-        <input name='passord' type='text' id='passord'>
+        <input name="passord" type="password" id="passord"> <!-- endret type på passord -->
       </div>
+
       <div class="field">
         <label for="tittel">Tittel</label>
-        <input name='tittel' type='text' id='tittel'>
+        <input name="tittel" type="text" id="tittel">
       </div>
+
       <div class="field">
         <label for="kommentar">Kommentar</label>
-        <textarea name='kommentar' id='kommentar'></textarea>
+        <textarea name="kommentar" id="kommentar"></textarea>
       </div>
+
       <div class="field">
         <label for="tekst">Tekst</label>
-        <textarea name='tekst' id='tekst'></textarea>
+        <textarea name="tekst" id="tekst"></textarea>
       </div>
-    </form>      
+
+    </form>
+
     <br/>
   </body>
 </html>
