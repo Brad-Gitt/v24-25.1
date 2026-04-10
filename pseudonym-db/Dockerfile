@@ -14,8 +14,10 @@ RUN echo "CREATE TABLE Pseudonym (           \
 RUN echo "INSERT INTO Pseudonym (epost, pseudonym, salt, passordhash) VALUES                \
    ('Ante@example.com'   ,'osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA' ), \
    ('Bjart@example.com'  ,'uozaixav', '1712167671', 'q37QpOdM2jSDeXOVAyiCSzMgy08dI7pLQ1aBElJps48' ), \
-   ('Cecilie@example.com','olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA' )" \
+   ('Cecilie@example.com','olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA' ), \
+   ('mikke@gmail.com','admin','12345678901','x4kxRrzfJD4PBaEA6qKjP5Q7tl75ODtubn3zHpcyma9')" \
    | sqlite3 var/www/pseudonym.db
+
 
 RUN chmod a+w var/www/pseudonym.db
 EXPOSE 83

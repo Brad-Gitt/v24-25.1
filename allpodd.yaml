@@ -5,21 +5,18 @@
 apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: "2026-02-03T12:22:57Z"
+  creationTimestamp: "2026-04-09T13:21:58Z"
   labels:
-    # start: Identifikasjonsetiketter for å markere frontend (brukergrensesnitt) - oppfyller NF6 (merking av skyverdier) (person 4)
     app: allpodd
-    tier: frontend
-    # slutt: Identifikasjonsetiketter for å markere frontend (brukergrensesnitt) - oppfyller NF6 (merking av skyverdier) (person 4)
   name: allpodd
 spec:
   ports:
   - name: "80"
-    nodePort: 31708
+    nodePort: 32199
     port: 80
     targetPort: 80
   - name: "81"
-    nodePort: 30499
+    nodePort: 30921
     port: 81
     targetPort: 81
   selector:
@@ -29,12 +26,9 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: "2026-02-03T12:22:57Z"
+  creationTimestamp: "2026-04-09T13:21:58Z"
   labels:
-    # start: Identifikasjonsetiketter for å markere backend (databehandling) - oppfyller NF6 (merking av skyverdier) (person 4)
     app: allpodd
-    tier: backend
-    # slutt: Identifikasjonsetiketter for å markere backend (databehandling) - oppfyller NF6 (merking av skyverdier) (person 4)
   name: allpodd
 spec:
   containers:
@@ -57,11 +51,6 @@ spec:
     name: bidrag-db
     stdin: true
     tty: true
-    # start: Monterer persistent lagring for bidrag-databasen - oppfyller F3 (persistens over nedetid og omstart) (person 4)
-    volumeMounts:
-    - mountPath: /var/www
-      name: bidrag-volume
-    # slutt: Monterer persistent lagring for bidrag-databasen - oppfyller F3 (persistens over nedetid og omstart) (person 4)
   - env:
     - name: TERM
       value: xterm
@@ -70,11 +59,6 @@ spec:
     name: pseudonym-db
     stdin: true
     tty: true
-    # start: Monterer persistent lagring for pseudonym-databasen - oppfyller F3 (persistens over nedetid og omstart) (person 4)
-    volumeMounts:
-    - mountPath: /var/www
-      name: pseudonym-volume
-    # slutt: Monterer persistent lagring for pseudonym-databasen - oppfyller F3 (persistens over nedetid og omstart) (person 4)
   - env:
     - name: TERM
       value: xterm
@@ -83,12 +67,3 @@ spec:
     name: web
     stdin: true
     tty: true
-  # start: Kobler PVC-er til poden for varig lagring - oppfyller F3 (persistens over nedetid og omstart) og NF2 (orkestrering med Kubernetes) (person 4)
-  volumes:
-  - name: bidrag-volume
-    persistentVolumeClaim:
-      claimName: bidrag-pvc
-  - name: pseudonym-volume
-    persistentVolumeClaim:
-      claimName: pseudonym-pvc
-  # slutt: Kobler PVC-er til poden for varig lagring - oppfyller F3 (persistens over nedetid og omstart) og NF2 (orkestrering med Kubernetes) (person 4)
