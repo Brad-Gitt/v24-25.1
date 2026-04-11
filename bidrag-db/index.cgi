@@ -149,10 +149,17 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         exit
     fi
 
-    if [ "$VISNING" = "admin" ]; then
+if [ "$VISNING" = "admin" ]; then
+    N=$(url_param navn)
+    P=$(url_param passord)
+
+    if autentiser_bidragseier "$N" "$P"; then
         vis_admin_liste
-        exit
+    else
+        echo "Ingen tilgang til admin."
     fi
+    exit
+fi
 
     if [ "$VISNING" = "min" ] || [ "$VISNING" = "Min" ]; then
         N=$(url_param navn)
