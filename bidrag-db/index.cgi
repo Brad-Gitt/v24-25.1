@@ -206,7 +206,11 @@ if [ "$HND" = "Liste" ]; then
 fi
 
 if [ "$HND" = "Admin" ]; then
-    vis_admin_liste
+    if autentiser_bidragseier "$N" "$P"; then
+        vis_admin_liste
+    else
+        echo "Ingen tilgang til admin."
+    fi
     exit
 fi
 
