@@ -24,7 +24,8 @@ fi
 
 # enkel decoding av URL-data (litt bedre enn originalen) (gdpr = korrekt behandling av inputdata)
 urldecode() {
-  printf '%s' "$1" | sed 's/+/ /g; s/%40/@/g'
+  DATA=$(printf '%s' "$1" | sed 's/+/ /g; s/%/\\x/g')
+  printf '%b' "$DATA"
 }
 
 # escaper spesialtegn så vi unngår XML injection (gdpr = hindrer manipulering av lagret data)
@@ -41,6 +42,29 @@ xml_escape() {
 mask_email() {
   printf '%s' "$1" | sed 's/^\(.\).*\(@.*\)$/\1***\2/; t; s/.*/***/'
 }
+
+# start: Bedre steg 4-brukerflyt og tilbakemeldinger - oppfyller F1 (identitet og flyt) og NF1 (dataminimering i flyt) (person 1 og person 3)
+er_pseudonymfeil() {
+  case "$1" in
+    "Epost mangler!"|"Passord mangler!"|"Bruker finnes ikke!"|"Feil passord!")
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
+skriv_svar_eller_standardmelding() {
+  SVAR="$1"
+  STANDARDMELDING="$2"
+
+  if [ -n "$SVAR" ]; then
+    printf '%s\n' "$SVAR"
+  else
+    printf '%s\n' "$STANDARDMELDING"
+  fi
+}
+# slutt: Bedre steg 4-brukerflyt og tilbakemeldinger - oppfyller F1 (identitet og flyt) og NF1 (dataminimering i flyt) (person 1 og person 3)
 
 # parser input på en tryggere måte enn før (ikke cut/for loop) (gdpr = mindre risiko for feil håndtering)
 TMP="/tmp/body.$$"
@@ -69,14 +93,35 @@ done < "$TMP"
 # rydder opp temp-fil etter bruk (gdpr = unngår lagring av sensitiv data)
 rm -f "$TMP"
 
+# grunnleggende validering av handling før videre ruting
+if [ -z "$H" ]; then
+  echo "Handling mangler"
+  exit 0
+fi
+
+# offentlig liste skal ikke kreve epost eller passord
+if [ "$H" = "Liste" ]; then
+  URL_B="http://allpodd:82/cgi-bin/index.cgi"
+  echo "BIDRAG kall til: $URL_B - handling=$H" >&2
+  SVAR=$(curl -s "$URL_B")
+  skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag å vise."
+  exit 0
+fi
+
+# admin-visning hører til steg 5 og skal ikke fremstå som ferdig i steg 4
+if [ "$H" = "Admin" ]; then
+  echo "Admin-visning blir ferdigstilt i steg 5."
+  exit 0
+fi
+
 # basic validering så vi ikke sender tom data videre (gdpr = dataminimering)
 if [ -z "$E" ]; then
   echo "Epost mangler"
   exit 0
 fi
 
-# krever passord med mindre man bare lister
-if [ "$H" != "Liste" ] && [ -z "$P" ]; then
+# krever passord for alle gjenvaerende steg 4-handlinger
+if [ -z "$P" ]; then
   echo "Passord mangler"
   exit 0
 fi
@@ -107,6 +152,10 @@ echo "PN kall til: $URL_PN (masked=$MASKED_EMAIL)" >&2
 # henter pseudonym basert på input
 N=$(curl -s -d "$XML_PN" "$URL_PN") 
 
+if er_pseudonymfeil "$N"; then
+  echo "$N"
+  exit 0
+fi
 
 # stopper hvis vi ikke får noe tilbake
 if [ -z "$N" ]; then
@@ -134,26 +183,26 @@ echo "BIDRAG kall til: $URL_B - handling=$H" >&2
 case "$H" in
 
   Ny)
-    curl -s -X POST -d "$XML_B" "$URL_B"
+    SVAR=$(curl -s -X POST -d "$XML_B" "$URL_B")
+    skriv_svar_eller_standardmelding "$SVAR" "Bidrag lagret."
     ;;
 
   Endre)
-    curl -s -X PUT -d "$XML_B" "$URL_B"
+    SVAR=$(curl -s -X PUT -d "$XML_B" "$URL_B")
+    skriv_svar_eller_standardmelding "$SVAR" "Bidrag oppdatert."
     ;;
 
   Slett)
-    curl -s -X DELETE -d "$XML_B" "$URL_B"
-    ;;
-
-  Liste)
-    curl -s "$URL_B"
+    SVAR=$(curl -s -X DELETE -d "$XML_B" "$URL_B")
+    skriv_svar_eller_standardmelding "$SVAR" "Bidrag slettet."
     ;;
 
   Min)
-    curl -s -X POST -d "$XML_B" "$URL_B" # Person 1 bruker POST fordi GET gir 404 i dette oppsettet
+    SVAR=$(curl -s -X POST -d "$XML_B" "$URL_B") # Person 1 bruker POST fordi GET gir 404 i dette oppsettet
+    skriv_svar_eller_standardmelding "$SVAR" "Ingen data funnet for brukeren."
     ;;
   *)
-    echo "Ukjent handling" >&2
+    echo "Ukjent handling"
     ;;
 esac
 

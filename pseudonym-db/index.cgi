@@ -10,6 +10,14 @@ echo 'Access-Control-Allow-Headers: Content-Type'
 echo "Content-Type:text/plain;charset=utf-8"
 echo
 
+# start: Tydeligere steg 4-autentiseringsfeil - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1)
+svar_autentiseringsfeil() {
+    printf '%s\n' "$1"
+    printf '%s\n' "$1" >&2
+    exit 0
+}
+# slutt: Tydeligere steg 4-autentiseringsfeil - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1)
+
 # stopper alt som ikke er POST
 if [ "$REQUEST_METHOD" != "POST" ]; then exit; fi
 
@@ -32,8 +40,8 @@ E=$( echo "$KR" | xmllint --xpath "string(/pseudonym/epost)"   -  2> /dev/null )
 P=$( echo "$KR" | xmllint --xpath "string(/pseudonym/passord)" -  2> /dev/null )
 
 # validerer input før videre bruk (gdpr = dataminimering)
-if [ -z "$E" ]; then echo "Epost mangler!" >&2; exit; fi # lagt til
-if [ -z "$P" ]; then echo "Passord mangler!" >&2; exit; fi # lagt til
+if [ -z "$E" ]; then svar_autentiseringsfeil "Epost mangler!"; fi
+if [ -z "$P" ]; then svar_autentiseringsfeil "Passord mangler!"; fi
 
 # enkel escaping for å redusere SQL injection risiko (gdpr = beskytter data)
 E_SAFE=$(printf "%s" "$E" | sed "s/'/''/g") # lagt til
@@ -42,7 +50,7 @@ E_SAFE=$(printf "%s" "$E" | sed "s/'/''/g") # lagt til
 S=$( sqlite3 "$DB" "SELECT salt FROM Pseudonym WHERE epost='$E_SAFE'" ) # endret til SAFE
 
 # stopper hvis bruker ikke finnes
-if [ -z "$S" ]; then echo "Bruker finnes ikke!" >&2 ; exit; fi # forbedret sjekk
+if [ -z "$S" ]; then svar_autentiseringsfeil "Bruker finnes ikke!"; fi
 
 # hasher passord med salt (lagrer ikke klartekst)
 H1=$( mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d'$' )
@@ -51,7 +59,7 @@ H1=$( mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d'$' )
 H2=$( sqlite3 "$DB" "SELECT passordhash FROM Pseudonym WHERE epost='$E_SAFE'" ) # bruker SAFE
 
 # sammenligner hash og henter pseudonym
-if [ "$H1" != "$H2" ]; then echo "Feil passord!" >&2 ; exit; fi
+if [ "$H1" != "$H2" ]; then svar_autentiseringsfeil "Feil passord!"; fi
 PN=$(sqlite3 "$DB" "SELECT pseudonym FROM Pseudonym WHERE epost='$E_SAFE'") # bruker DB variabel konsekvent
 
 # logger mindre sensitiv info (gdpr = begrenser eksponering)

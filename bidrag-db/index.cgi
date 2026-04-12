@@ -65,11 +65,18 @@ autentiser_bidragseier() {
         return 1
     fi
 
-    H1=$(mkpasswd -m sha-256 -S "$S" "$PW" | cut -f4 -d$)
+    H1=$(mkpasswd -m sha-256 -S "$S" "$PW" | cut -f4 -d'$')
     H2=$(sqlite3 "$DB" "SELECT passordhash FROM Bidrag WHERE pseudonym='$PN_SQL'")
 
     [ "$H1" = "$H2" ]
 }
+
+# start: Skiller mellom manglende bidrag og autentiseringsfeil i Min-visning - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1 og person 2)
+har_bidrag() {
+    PN_SQL=$(sql_escape "$1")
+    sqlite3 "$DB" "SELECT 1 FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1"
+}
+# slutt: Skiller mellom manglende bidrag og autentiseringsfeil i Min-visning - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1 og person 2)
 
 vis_offentlig_liste() {
     sqlite3 -line "$DB" "
@@ -149,23 +156,25 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         exit
     fi
 
-if [ "$VISNING" = "admin" ]; then
-    N=$(url_param navn)
-    P=$(url_param passord)
+    if [ "$VISNING" = "admin" ]; then
+        N=$(url_param navn)
+        P=$(url_param passord)
 
-    if autentiser_bidragseier "$N" "$P"; then
-        vis_admin_liste
-    else
-        echo "Ingen tilgang til admin."
+        if autentiser_bidragseier "$N" "$P"; then
+            vis_admin_liste
+        else
+            echo "Ingen tilgang til admin."
+        fi
+        exit
     fi
-    exit
-fi
 
     if [ "$VISNING" = "min" ] || [ "$VISNING" = "Min" ]; then
         N=$(url_param navn)
         P=$(url_param passord)
 
-        if autentiser_bidragseier "$N" "$P"; then
+        if [ -z "$(har_bidrag "$N")" ]; then
+            echo "Ingen data funnet for brukeren."
+        elif autentiser_bidragseier "$N" "$P"; then
             vis_min_visning "$N"
         else
             echo "Autentisering feilet."
@@ -192,7 +201,9 @@ HND=$(xml_felt handling)
 logg_innholdsoperasjon
 
 if [ "$HND" = "Min" ]; then
-    if autentiser_bidragseier "$N" "$P"; then
+    if [ -z "$(har_bidrag "$N")" ]; then
+        echo "Ingen data funnet for brukeren."
+    elif autentiser_bidragseier "$N" "$P"; then
         vis_min_visning "$N"
     else
         echo "Autentisering feilet."
@@ -240,7 +251,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         fi
 
         S=$(tr -dc '0-9' </dev/urandom | head -c 11)
-        H=$(mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d$)
+        H=$(mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d'$')
 
         sqlite3 "$DB" "
             INSERT INTO Bidrag (pseudonym, salt, passordhash, kommentar, offentlig_nokkel, tittel, tekst)
@@ -254,26 +265,28 @@ N_SQL=$(sql_escape "$N")
 S=$(sqlite3 "$DB" "SELECT salt FROM Bidrag WHERE pseudonym='$N_SQL'")
 if [ -z "$S" ]; then echo "Salt mangler" ; exit; fi
 
-H1=$(mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d$)
+H1=$(mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d'$')
 H2=$(sqlite3 "$DB" "SELECT passordhash FROM Bidrag WHERE pseudonym='$N_SQL'")
 
 if [ "$H1" != "$H2" ]; then echo "Feil passord!" >&2 ; exit; fi
 
-if [ "$REQUEST_METHOD" = "DELETE" ]; then
-    sqlite3 "$DB" "DELETE FROM Bidrag WHERE pseudonym='$N_SQL'"
+case "$REQUEST_METHOD" in
+    DELETE)
+        sqlite3 "$DB" "DELETE FROM Bidrag WHERE pseudonym='$N_SQL'"
+        ;;
+    PUT)
+        valider_innhold
+        K_SQL=$(sql_escape "$K")
+        O_SQL=$(sql_escape "$O")
+        T_SQL=$(sql_escape "$T")
+        X_SQL=$(sql_escape "$X")
 
-elif [ "$REQUEST_METHOD" = "PUT" ]; then
-    valider_innhold
-    K_SQL=$(sql_escape "$K")
-    O_SQL=$(sql_escape "$O")
-    T_SQL=$(sql_escape "$T")
-    X_SQL=$(sql_escape "$X")
-
-    sqlite3 "$DB" "
-       UPDATE Bidrag SET
-           kommentar='$K_SQL',
-           offentlig_nokkel='$O_SQL',
-           tittel='$T_SQL',
-           tekst='$X_SQL'
-       WHERE pseudonym='$N_SQL'"
-fi
+        sqlite3 "$DB" "
+           UPDATE Bidrag SET
+               kommentar='$K_SQL',
+               offentlig_nokkel='$O_SQL',
+               tittel='$T_SQL',
+               tekst='$X_SQL'
+           WHERE pseudonym='$N_SQL'"
+        ;;
+esac

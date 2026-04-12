@@ -1,6 +1,9 @@
 FROM alpine
 RUN apk add busybox-extras libxml2-utils sqlite mkpasswd
 COPY index.cgi var/www/cgi-bin/
+# start: Sørger for kjørbar CGI i bidrag-tjenesten - oppfyller F1 og F2 for bidragshåndtering (person 2)
+RUN chmod +x /var/www/cgi-bin/index.cgi
+# slutt: Sørger for kjørbar CGI i bidrag-tjenesten - oppfyller F1 og F2 for bidragshåndtering (person 2)
 
 RUN echo "CREATE TABLE Bidrag (              \
   pseudonym        VARCHAR(200) PRIMARY KEY, \

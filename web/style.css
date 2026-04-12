@@ -36,7 +36,8 @@ label {
   font-weight: 500;
 }
 
-input[type="text"], textarea {
+/* start: Styling for passordfelt - oppfyller F1 (brukerinput for autentisering) (person 3) */
+input[type="text"], input[type="password"], textarea {
   width: 80%;
   padding: 12px;
   border: 2px solid #e1e5e9;
@@ -45,10 +46,11 @@ input[type="text"], textarea {
   transition: border-color 0.3s;
 }
 
-input[type="text"]:focus, textarea:focus {
+input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
   outline: none;
   border-color: #667eea;
 }
+/* slutt: Styling for passordfelt - oppfyller F1 (brukerinput for autentisering) (person 3) */
 
 .buttons {
   display: flex;
@@ -88,3 +90,13 @@ input[type="text"]:focus, textarea:focus {
 #liste-btn {
   background: linear-gradient(45deg, #FF9800, #F57C00);
 }
+
+/* start: Farge for Min- og Admin-knapp - oppfyller F2 (tydelig UI for min/admin-visning) (person 3) */
+#min-btn {
+  background: linear-gradient(45deg, #009688, #00796B);
+}
+
+#admin-btn {
+  background: linear-gradient(45deg, #455A64, #263238);
+}
+/* slutt: Farge for Min- og Admin-knapp - oppfyller F2 (tydelig UI for min/admin-visning) (person 3) */
