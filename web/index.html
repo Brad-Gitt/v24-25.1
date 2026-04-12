@@ -4,12 +4,14 @@
     <meta charset="utf-8">
     <title>BIDRAG</title>
     <link rel="stylesheet" href="style.css">
-    <!-- start: Laster klientside-kryptering for kommentar - oppfyller F1 (privat kommentar) og NF7 (kryptering i klient) (person 3) -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="crypto.js" defer></script>
-    <!-- slutt: Laster klientside-kryptering for kommentar - oppfyller F1 (privat kommentar) og NF7 (kryptering i klient) (person 3) -->
   </head>
   <body>
     <form action="http://localhost:8081/cgi-bin/index.cgi" method="post" id="bidrag-form"> <!-- fikset url -->
+      <div class="logo-wrap">
+        <img src="skytjenester-logo.png" alt="Allpodd-logo" class="site-logo">
+      </div>
 
       <div class="buttons">
         <input type="submit" name="handling" value="Ny" id="ny-btn">
@@ -27,7 +29,7 @@
 
       <div class="field">
         <label for="passord">Passord</label>
-        <input name="passord" type="password" id="passord"> <!-- endret type på passord -->
+        <input name="passord" type="password" id="passord"> <!-- endret type p?? passord -->
       </div>
 
       <div class="field">
@@ -40,11 +42,7 @@
         <textarea name="kommentar" id="kommentar"></textarea>
       </div>
 
-      <!-- start: Skjult krypteringsmetadata og brukerinfo for steg 6 - oppfyller F1 (privat kommentar) og NF7 (nøkkelhåndtering i klient) (person 3) -->
       <input name="offentlig_nokkel" type="hidden" id="offentlig_nokkel">
-      <p id="kryptering-status" class="crypto-status" hidden aria-live="polite"></p>
-      <p class="privacy-note">Kommentar krypteres i nettleseren ved <strong>Ny</strong> og <strong>Endre</strong>. I denne fasen vil <strong>Min</strong> fortsatt vise lagret ciphertext frem til steg 7.</p>
-      <!-- slutt: Skjult krypteringsmetadata og brukerinfo for steg 6 - oppfyller F1 (privat kommentar) og NF7 (nøkkelhåndtering i klient) (person 3) -->
 
       <div class="field">
         <label for="tekst">Tekst</label>
@@ -56,3 +54,4 @@
     <br/>
   </body>
 </html>
+

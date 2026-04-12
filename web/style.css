@@ -25,6 +25,20 @@ form {
   width: 350px;
 }
 
+.logo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.site-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
 .field {
   margin-bottom: 20px;
 }
@@ -36,7 +50,6 @@ label {
   font-weight: 500;
 }
 
-/* start: Styling for passordfelt - oppfyller F1 (brukerinput for autentisering) (person 3) */
 input[type="text"], input[type="password"], textarea {
   width: 80%;
   padding: 12px;
@@ -50,7 +63,6 @@ input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
   outline: none;
   border-color: #667eea;
 }
-/* slutt: Styling for passordfelt - oppfyller F1 (brukerinput for autentisering) (person 3) */
 
 .buttons {
   display: flex;
@@ -91,7 +103,6 @@ input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
   background: linear-gradient(45deg, #FF9800, #F57C00);
 }
 
-/* start: Farge for Min- og Admin-knapp - oppfyller F2 (tydelig UI for min/admin-visning) (person 3) */
 #min-btn {
   background: linear-gradient(45deg, #009688, #00796B);
 }
@@ -99,31 +110,4 @@ input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
 #admin-btn {
   background: linear-gradient(45deg, #455A64, #263238);
 }
-/* slutt: Farge for Min- og Admin-knapp - oppfyller F2 (tydelig UI for min/admin-visning) (person 3) */
 
-/* start: Status og info for klientside-kryptering - oppfyller F1 (privat kommentar) og NF7 (kryptering i klient) (person 3) */
-.crypto-status {
-  margin: -8px 0 16px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.crypto-status[data-state="info"] {
-  background: rgba(33, 150, 243, 0.12);
-  color: #0d47a1;
-}
-
-.crypto-status[data-state="error"] {
-  background: rgba(244, 67, 54, 0.14);
-  color: #b71c1c;
-}
-
-.privacy-note {
-  margin: -4px 0 18px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #37474f;
-}
-/* slutt: Status og info for klientside-kryptering - oppfyller F1 (privat kommentar) og NF7 (kryptering i klient) (person 3) */
