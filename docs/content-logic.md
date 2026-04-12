@@ -13,9 +13,10 @@
   - ingen e-post
   - ingen pseudonym
   - ingen kommentar
-- Admin-visning: `GET /cgi-bin/index.cgi?visning=admin`
+- Admin-visning: via `Admin`-handling i `app/index.cgi`, eller `GET /cgi-bin/index.cgi?visning=admin&navn=admin&epost=...&passord=...`
   - viser `pseudonym`, `tittel` og `tekst`
   - viser fortsatt **ikke** kommentar
+  - krever gyldig admin-bruker fra pseudonym-databasen
 - Min visning: `GET /cgi-bin/index.cgi?visning=min&navn=<pseudonym>&passord=<passord>`
   - viser eget `pseudonym`, `tittel`, `tekst` og `kommentar`
   - brukes for å oppfylle kravet om at brukerens egen kommentar skal være tilgjengelig for brukeren selv
@@ -54,7 +55,7 @@ I tillegg håndheves følgende:
 
 ### Liste ut bidrag
 - `GET` → offentlig anonym liste
-- `GET ?visning=admin` → pseudonymisert adminliste
+- `GET ?visning=admin&navn=admin&epost=...&passord=...` eller `POST handling=Admin` via app → pseudonymisert adminliste for admin
 - `GET ?visning=min&navn=...&passord=...` → brukerens egen visning
 
 ## Testforslag
@@ -72,7 +73,7 @@ Forventning:
 ### 2. Adminliste
 Kjør:
 ```sh
-curl -s "http://localhost:8082/cgi-bin/index.cgi?visning=admin"
+curl -s "http://localhost:8082/cgi-bin/index.cgi?visning=admin&navn=admin&epost=mikke@gmail.com&passord=123"
 ```
 Forventning:
 - ser `pseudonym`, `tittel`, `tekst`
@@ -92,4 +93,3 @@ Prøv å sende inn for lang `tittel` eller `tekst`.
 Forventning:
 - backend avviser forespørselen
 - data lagres ikke
-

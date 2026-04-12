@@ -21,6 +21,15 @@ xml_felt() {
     printf '%s' "$KR" | xmllint --xpath "string(/bidrag/$FELT)" - 2>/dev/null
 }
 
+xml_escape() {
+    printf '%s' "$1" | sed \
+        -e 's/&/\&amp;/g' \
+        -e 's/</\&lt;/g' \
+        -e 's/>/\&gt;/g' \
+        -e 's/"/\&quot;/g' \
+        -e "s/'/\&apos;/g"
+}
+
 valider_lengde() {
     FELTNAVN="$1"
     VERDI="$2"
@@ -77,6 +86,26 @@ har_bidrag() {
     sqlite3 "$DB" "SELECT 1 FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1"
 }
 # slutt: Skiller mellom manglende bidrag og autentiseringsfeil i Min-visning - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1 og person 2)
+
+# start: Admin-autorisering med dobbel sjekk mot pseudonym-db - oppfyller F2 (admin-visning med pseudonym) og NF1 (forsvar i dybden) (person 3 og person 5)
+er_adminbruker() {
+    PN="$1"
+    EPOST="$2"
+    PASSORD="$3"
+
+    if [ "$PN" != "admin" ] || [ -z "$EPOST" ] || [ -z "$PASSORD" ]; then
+        return 1
+    fi
+
+    XML_PN="<pseudonym>
+<epost>$(xml_escape "$EPOST")</epost>
+<passord>$(xml_escape "$PASSORD")</passord>
+</pseudonym>"
+
+    SVAR=$(curl -s -d "$XML_PN" "http://allpodd:83/cgi-bin/index.cgi")
+    [ "$SVAR" = "admin" ]
+}
+# slutt: Admin-autorisering med dobbel sjekk mot pseudonym-db - oppfyller F2 (admin-visning med pseudonym) og NF1 (forsvar i dybden) (person 3 og person 5)
 
 vis_offentlig_liste() {
     sqlite3 -line "$DB" "
@@ -158,9 +187,10 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
 
     if [ "$VISNING" = "admin" ]; then
         N=$(url_param navn)
+        E=$(url_param epost)
         P=$(url_param passord)
 
-        if autentiser_bidragseier "$N" "$P"; then
+        if er_adminbruker "$N" "$E" "$P"; then
             vis_admin_liste
         else
             echo "Ingen tilgang til admin."
@@ -191,6 +221,7 @@ KR=$(head -c "$CONTENT_LENGTH")
 N=$(xml_felt navn)
 N=$(trim "$N") # Person 1 fjernet whitespace fra pseudonym så DB matcher
 echo "DEBUG navn=$N" >&2
+E=$(xml_felt epost)
 P=$(xml_felt passord)
 K=$(xml_felt kommentar)
 O=$(xml_felt offentlig_nokkel)
@@ -217,7 +248,7 @@ if [ "$HND" = "Liste" ]; then
 fi
 
 if [ "$HND" = "Admin" ]; then
-    if autentiser_bidragseier "$N" "$P"; then
+    if er_adminbruker "$N" "$E" "$P"; then
         vis_admin_liste
     else
         echo "Ingen tilgang til admin."

@@ -66,6 +66,12 @@ skriv_svar_eller_standardmelding() {
 }
 # slutt: Bedre steg 4-brukerflyt og tilbakemeldinger - oppfyller F1 (identitet og flyt) og NF1 (dataminimering i flyt) (person 1 og person 3)
 
+# start: Admin-routing med tilgangsbegrensning - oppfyller F2 (admin-visning med pseudonym) og NF1 (forsvar i dybden) (person 3 og person 5)
+er_adminpseudonym() {
+  [ "$1" = "admin" ]
+}
+# slutt: Admin-routing med tilgangsbegrensning - oppfyller F2 (admin-visning med pseudonym) og NF1 (forsvar i dybden) (person 3 og person 5)
+
 # parser input på en tryggere måte enn før (ikke cut/for loop) (gdpr = mindre risiko for feil håndtering)
 TMP="/tmp/body.$$"
 printf '%s\n' "$KROPP" | tr '&' '\n' > "$TMP"
@@ -105,12 +111,6 @@ if [ "$H" = "Liste" ]; then
   echo "BIDRAG kall til: $URL_B - handling=$H" >&2
   SVAR=$(curl -s "$URL_B")
   skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag å vise."
-  exit 0
-fi
-
-# admin-visning hører til steg 5 og skal ikke fremstå som ferdig i steg 4
-if [ "$H" = "Admin" ]; then
-  echo "Admin-visning blir ferdigstilt i steg 5."
   exit 0
 fi
 
@@ -163,9 +163,15 @@ if [ -z "$N" ]; then
   exit 0
 fi
 
+if [ "$H" = "Admin" ] && ! er_adminpseudonym "$N"; then
+  echo "Ingen tilgang til admin."
+  exit 0
+fi
+
 # lager XML for bidrag-databasen med sanitert input (gdpr = trygg behandling av brukerdata)
 XML_B="<bidrag>
 <navn>$(xml_escape "$N")</navn>
+<epost>${E_ESC}</epost>
 <passord>${P_ESC}</passord>
 <kommentar>${K_ESC}</kommentar>
 <offentlig_nokkel>${O_ESC}</offentlig_nokkel>
@@ -200,6 +206,11 @@ case "$H" in
   Min)
     SVAR=$(curl -s -X POST -d "$XML_B" "$URL_B") # Person 1 bruker POST fordi GET gir 404 i dette oppsettet
     skriv_svar_eller_standardmelding "$SVAR" "Ingen data funnet for brukeren."
+    ;;
+
+  Admin)
+    SVAR=$(curl -s -X POST -d "$XML_B" "$URL_B")
+    skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag å vise."
     ;;
   *)
     echo "Ukjent handling"
