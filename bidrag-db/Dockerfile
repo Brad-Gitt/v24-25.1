@@ -2,26 +2,29 @@ FROM alpine
 # start: Intern adminverifisering mot pseudonym-db - oppfyller F2 (tilgangsbegrenset admin-visning) og NF1 (forsvar i dybden) (person 3 og person 5)
 RUN apk add busybox-extras libxml2-utils sqlite mkpasswd curl
 # slutt: Intern adminverifisering mot pseudonym-db - oppfyller F2 (tilgangsbegrenset admin-visning) og NF1 (forsvar i dybden) (person 3 og person 5)
-COPY index.cgi var/www/cgi-bin/
+COPY index.cgi /var/www/cgi-bin/
 # start: Sørger for kjørbar CGI i bidrag-tjenesten - oppfyller F1 og F2 for bidragshåndtering (person 2)
 RUN chmod +x /var/www/cgi-bin/index.cgi
 # slutt: Sørger for kjørbar CGI i bidrag-tjenesten - oppfyller F1 og F2 for bidragshåndtering (person 2)
 
 RUN echo "CREATE TABLE Bidrag (              \
   pseudonym        VARCHAR(200) PRIMARY KEY, \
-  salt             VARCHAR(11),              \	
+  salt             VARCHAR(11),              \
   passordhash      VARCHAR(44),              \
   kommentar        VARCHAR(1000),            \
   offentlig_nokkel VARCHAR(200),             \
   tittel           VARCHAR(100),             \
-  tekst            VARCHAR(1000))" | sqlite3 var/www/bidrag.db
+  tekst            VARCHAR(1000))" | sqlite3 /var/www/bidrag.db
 
 RUN echo "INSERT INTO Bidrag (pseudonym, salt, passordhash) VALUES             \
    ('osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA' ), \
    ('uozaixav', '1712167671', 'q37QpOdM2jSDeXOVAyiCSzMgy08dI7pLQ1aBElJps48' ), \
    ('olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA' )" \
-   | sqlite3 var/www/bidrag.db
+   | sqlite3 /var/www/bidrag.db
 
-RUN chmod a+w var/www/bidrag.db
-EXPOSE 82
-CMD httpd -p 82 -h /var/www -f -vv
+RUN chmod a+w /var/www/bidrag.db
+
+# start: Høye interne porter for non-root-kjøring i Kubernetes - oppfyller NF1 (minste privilegium) og NF3 (stabil lokal drift) (person 4)
+EXPOSE 8082
+CMD httpd -p 8082 -h /var/www -f -vv
+# slutt: Høye interne porter for non-root-kjøring i Kubernetes - oppfyller NF1 (minste privilegium) og NF3 (stabil lokal drift) (person 4)

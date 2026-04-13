@@ -1,6 +1,8 @@
 #!/bin/sh
 
-DB=../pseudonym.db
+# start: Konfigurerbar databasebane for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
+DB="${PSEUDONYM_DB_PATH:-../pseudonym.db}"
+# slutt: Konfigurerbar databasebane for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
 
 echo 'Access-Control-Allow-Origin: http://localhost:8080'
 echo 'Access-Control-Allow-Credentials: true'

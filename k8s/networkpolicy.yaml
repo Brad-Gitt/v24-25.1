@@ -1,0 +1,48 @@
+# start: NetworkPolicy som begrenser ytre angrepsflate til web og app - oppfyller NF1 (defense in depth og zero trust) og NF2 (Kubernetes) (person 4)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allpodd-default-deny-ingress
+  labels:
+    # start: Identifikasjonsetiketter for nettverkspolicy - oppfyller NF6 (merking av skyverdier) (person 4)
+    app: allpodd
+    component: network-policy
+    tier: control
+    security: hardened
+    # slutt: Identifikasjonsetiketter for nettverkspolicy - oppfyller NF6 (merking av skyverdier) (person 4)
+spec:
+  podSelector:
+    matchLabels:
+      app: allpodd
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allpodd-allow-web-and-app
+  labels:
+    # start: Identifikasjonsetiketter for nettverkspolicy - oppfyller NF6 (merking av skyverdier) (person 4)
+    app: allpodd
+    component: network-policy
+    tier: control
+    security: hardened
+    # slutt: Identifikasjonsetiketter for nettverkspolicy - oppfyller NF6 (merking av skyverdier) (person 4)
+spec:
+  podSelector:
+    matchLabels:
+      app: allpodd
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8081
+  egress: []
+# slutt: NetworkPolicy som begrenser ytre angrepsflate til web og app - oppfyller NF1 (defense in depth og zero trust) og NF2 (Kubernetes) (person 4)

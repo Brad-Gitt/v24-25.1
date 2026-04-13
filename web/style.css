@@ -1,19 +1,36 @@
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #005cb9 0%, #005cb9 46%, #f6f8fc 46%, #f6f8fc 54%, #da1f2d 54%, #da1f2d 100%);
   margin: 0;
   padding: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 @media (prefers-color-scheme: dark) {
-  body { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); }
-  form { background-color: #2c2c2c; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-  input[type="text"], textarea { background-color: #3a3a3a; color: #fff; border-color: #666; }
-  td { color: #fff; }
+  body {
+    background: linear-gradient(135deg, #003a74 0%, #003a74 46%, #dfe6ee 46%, #dfe6ee 54%, #a81925 54%, #a81925 100%);
+  }
+
+  form {
+    background-color: #2c2c2c;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  input[type="text"],
+  input[type="password"],
+  textarea {
+    background-color: #3a3a3a;
+    color: #fff;
+    border-color: #666;
+  }
+
+  label,
+  td {
+    color: #fff;
+  }
 }
 
 form {
@@ -35,8 +52,8 @@ form {
   width: 72px;
   height: 72px;
   object-fit: contain;
-  border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .field {
@@ -50,7 +67,9 @@ label {
   font-weight: 500;
 }
 
-input[type="text"], input[type="password"], textarea {
+input[type="text"],
+input[type="password"],
+textarea {
   width: 80%;
   padding: 12px;
   border: 2px solid #e1e5e9;
@@ -59,7 +78,9 @@ input[type="text"], input[type="password"], textarea {
   transition: border-color 0.3s;
 }
 
-input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+input[type="text"]:focus,
+input[type="password"]:focus,
+textarea:focus {
   outline: none;
   border-color: #667eea;
 }
@@ -111,3 +132,27 @@ input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
   background: linear-gradient(45deg, #455A64, #263238);
 }
 
+.respons-felt {
+  margin: 0 0 18px;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.respons-felt[data-state="info"] {
+  background: rgba(0, 92, 185, 0.10);
+  color: #0b3c75;
+}
+
+.respons-felt[data-state="success"] {
+  background: rgba(76, 175, 80, 0.14);
+  color: #1b5e20;
+}
+
+.respons-felt[data-state="error"] {
+  background: rgba(218, 31, 45, 0.14);
+  color: #8f1020;
+}

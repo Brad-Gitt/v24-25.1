@@ -1,88 +1,34 @@
-#!/bin/sh 
+#!/bin/sh
 
-# Rydder opp (ved å drepe og fjerne podden -- om den finnes)
-podman pod kill allpodd
-podman pod rm   allpodd
+set -eu
 
+# start: Bygger og importerer lokale bilder for herdede Kubernetes-manifester - oppfyller NF2 (Kubernetes) og NF3 (lokal utvikling med Podman og microk8s) (person 4)
+podman build pseudonym-db -t localhost/pseudonym-db:latest
+podman build bidrag-db    -t localhost/bidrag-db:latest
+podman build app          -t localhost/app:latest
+podman build web          -t localhost/web:latest
 
-########################################################
-# Bygger konteinerbilder i Podmans konteinerbildearkiv #
-# med kommandoer på følgende form:			   # 
-# 							   #
-# podman build <katalog> -t <bildenavn>                #
-########################################################
+podman save localhost/pseudonym-db:latest | microk8s ctr image import -
+podman save localhost/bidrag-db:latest    | microk8s ctr image import -
+podman save localhost/app:latest          | microk8s ctr image import -
+podman save localhost/web:latest          | microk8s ctr image import -
+# slutt: Bygger og importerer lokale bilder for herdede Kubernetes-manifester - oppfyller NF2 (Kubernetes) og NF3 (lokal utvikling med Podman og microk8s) (person 4)
 
-podman build pseudonym-db -t pseudonym-db
-podman build bidrag-db    -t bidrag-db
-podman build app          -t app
-podman build web          -t web
+# start: Bruker kuraterte manifestfiler i stedet for podman generate kube - oppfyller NF1 (kontrollert konfigurasjon), NF2 (Kubernetes) og deler av NF7 (recovery) (person 4)
+microk8s kubectl apply -f k8s/pvc.yaml
+microk8s kubectl apply -f k8s/rbac.yaml
+microk8s kubectl apply -f k8s/networkpolicy.yaml
 
+microk8s kubectl delete service/allpodd --ignore-not-found
+microk8s kubectl delete pod/allpodd --ignore-not-found
 
-##################################################################
-# Overfører bilder fra Podman til Kubernetes	             #
-# Referanser:						     #
-# - https://docs.podman.io/en/latest/markdown/podman-save.1.html #
-# - https://microk8s.io/docs/registry-images		     #
-##################################################################
+microk8s kubectl apply -f allpodd.yaml
+microk8s kubectl wait --for=condition=Ready pod/allpodd --timeout=180s
+# slutt: Bruker kuraterte manifestfiler i stedet for podman generate kube - oppfyller NF1 (kontrollert konfigurasjon), NF2 (Kubernetes) og deler av NF7 (recovery) (person 4)
 
-podman save  pseudonym-db:latest | microk8s ctr image import -
-podman save  bidrag-db:latest    | microk8s ctr image import -
-podman save  app:latest          | microk8s ctr image import -
-podman save  web:latest          | microk8s ctr image import -
-
-
-##########################################################
-# Lager og redigerer filen allpodd.yaml som brukes til å #
-# iverksette systemet i Kubernetes (microk8s) 	     #
-##########################################################
-
-# Oppretter Podman-podd
-podman  pod create --name allpodd -p 8080:80 -p 8081:81
-
-# Starter konteinere, basert på konternerbildene, i den opprettede
-# podden.
-podman run -dit --pod=allpodd --restart=always --name app          localhost/app
-podman run -dit --pod=allpodd --restart=always --name bidrag-db    localhost/bidrag-db
-podman run -dit --pod=allpodd --restart=always --name pseudonym-db localhost/pseudonym-db
-podman run -dit --pod=allpodd --restart=always --name web          localhost/web
-
-
-# Sletter gammel kuberntes-fil -- om den finnes
-rm -f ./allpodd.yaml
-
-# Lager kubernetes-fil
-podman generate kube allpodd --service -f ./allpodd.yaml
-
-# imagePullPolicy: Never
-# Ref: https://stackoverflow.com/questions/37302776/what-is-the-meaning-of-imagepullbackoff-status-on-a-kubernetes-pod
-sed -i "/image:/a \    imagePullPolicy: Never" allpodd.yaml
-
-# Rydder opp (ved å drepe og fjerne podden)
-podman pod kill allpodd
-podman pod rm   allpodd
-
-
-########################
-# Starter opp systemet #
-########################
-
-# Stoppper kjørende service og pod -- om de finnes
-kubectl delete service/allpodd --grace-period=1
-kubectl delete pod/allpodd     --grace-period=1
-
-# Starte podden i en Service i K8S
-kubectl create -f allpodd.yaml
-
-
-####################################################
-# Skriver ut info for tilgang på lokal vertsmaskin #
-####################################################
-
-echo 
 echo
 echo "Gjør web (80) og app (81) tilgjengelig på localhost:"
-echo 
-echo "microk8s kubectl port-forward service/allpodd 8080:80 &"
-echo "microk8s kubectl port-forward service/allpodd 8081:81 &"
-echo 
+echo
+echo "microk8s kubectl port-forward service/allpodd 8080:80 8081:81"
+echo
 echo "For å se i nettleser, gå til http://localhost:8080"

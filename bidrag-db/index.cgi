@@ -1,6 +1,9 @@
 #!/bin/sh
 
-DB=../bidrag.db
+# start: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
+DB="${BIDRAG_DB_PATH:-../bidrag.db}"
+PSEUDONYM_INTERNAL_URL="${PSEUDONYM_INTERNAL_URL:-http://127.0.0.1:8083/cgi-bin/index.cgi}"
+# slutt: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
 
 # start: Person 2 – innhold + visninger (F1, F2, NF1)
 url_param() {
@@ -87,6 +90,13 @@ har_bidrag() {
 }
 # slutt: Skiller mellom manglende bidrag og autentiseringsfeil i Min-visning - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1 og person 2)
 
+# start: Tydelig feilmelding når Endre brukes uten eksisterende bidrag - oppfyller F1 (brukerflyt) og NF1 (integritet i tilbakemeldinger) (person 2)
+svar_mangler_bidrag_for_endre() {
+    echo "Ingen eksisterende bidrag å endre. Bruk Ny."
+    exit
+}
+# slutt: Tydelig feilmelding når Endre brukes uten eksisterende bidrag - oppfyller F1 (brukerflyt) og NF1 (integritet i tilbakemeldinger) (person 2)
+
 # start: Admin-autorisering med dobbel sjekk mot pseudonym-db - oppfyller F2 (admin-visning med pseudonym) og NF1 (forsvar i dybden) (person 3 og person 5)
 er_adminbruker() {
     PN="$1"
@@ -102,7 +112,7 @@ er_adminbruker() {
 <passord>$(xml_escape "$PASSORD")</passord>
 </pseudonym>"
 
-    SVAR=$(curl -s -d "$XML_PN" "http://allpodd:83/cgi-bin/index.cgi")
+    SVAR=$(curl -s -d "$XML_PN" "$PSEUDONYM_INTERNAL_URL")
     [ "$SVAR" = "admin" ]
 }
 # slutt: Admin-autorisering med dobbel sjekk mot pseudonym-db - oppfyller F2 (admin-visning med pseudonym) og NF1 (forsvar i dybden) (person 3 og person 5)
@@ -144,6 +154,68 @@ vis_min_visning() {
         LIMIT 1
     "
 }
+
+# start: Steg 7-tilpasning for ciphertext og egen visning - oppfyller F1 (privat kommentar for bruker) og NF1 (sikker håndtering av ciphertext i backend) (person 5)
+er_krypteringsmetadata() {
+    printf '%s' "$1" | grep -Eq '^enc-v1\|[0-9]+\|[A-Za-z0-9+/=]+\|[A-Za-z0-9+/=]+$'
+}
+
+valider_kryptert_kommentar() {
+    if [ -z "$K" ] && [ -n "$O" ]; then
+        echo "Krypteringsmetadata kan ikke sendes uten kommentar."
+        exit 1
+    fi
+
+    if [ -n "$K" ] && [ -z "$O" ]; then
+        echo "Kommentar må sendes kryptert med metadata."
+        exit 1
+    fi
+
+    if [ -n "$O" ] && ! er_krypteringsmetadata "$O"; then
+        echo "Ugyldig krypteringsmetadata."
+        exit 1
+    fi
+}
+
+hent_bidragsfelt() {
+    FELT="$1"
+    PN_SQL=$(sql_escape "$2")
+
+    case "$FELT" in
+        tittel)
+            SQL_FELT="coalesce(trim(tittel), '')"
+            ;;
+        tekst)
+            SQL_FELT="coalesce(trim(tekst), '')"
+            ;;
+        kommentar)
+            SQL_FELT="coalesce(kommentar, '')"
+            ;;
+        offentlig_nokkel)
+            SQL_FELT="coalesce(offentlig_nokkel, '')"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    sqlite3 "$DB" "SELECT $SQL_FELT FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1"
+}
+
+vis_min_visning() {
+    PN="$1"
+    TITTEL_VERDI=$(hent_bidragsfelt tittel "$PN")
+    TEKST_VERDI=$(hent_bidragsfelt tekst "$PN")
+    KOMMENTAR_VERDI=$(hent_bidragsfelt kommentar "$PN")
+    NOKKEL_VERDI=$(hent_bidragsfelt offentlig_nokkel "$PN")
+
+    printf '<min><tittel>%s</tittel><tekst>%s</tekst><kommentar>%s</kommentar><offentlig_nokkel>%s</offentlig_nokkel></min>\n' \
+        "$(xml_escape "$TITTEL_VERDI")" \
+        "$(xml_escape "$TEKST_VERDI")" \
+        "$(xml_escape "$KOMMENTAR_VERDI")" \
+        "$(xml_escape "$NOKKEL_VERDI")"
+}
+# slutt: Steg 7-tilpasning for ciphertext og egen visning - oppfyller F1 (privat kommentar for bruker) og NF1 (sikker håndtering av ciphertext i backend) (person 5)
 
 logg_innholdsoperasjon() {
     HAR_TITTEL=nei
@@ -269,6 +341,9 @@ fi
 if [ "$REQUEST_METHOD" = "POST" ]; then
     if [ -n "$P" ]; then
         valider_innhold
+        # start: Steg 7-validering ved lagring av kryptert kommentar - oppfyller F1 (privat kommentar) og NF1 (sikker ciphertext-lagring) (person 5)
+        valider_kryptert_kommentar
+        # slutt: Steg 7-validering ved lagring av kryptert kommentar - oppfyller F1 (privat kommentar) og NF1 (sikker ciphertext-lagring) (person 5)
         N_SQL=$(sql_escape "$N")
         K_SQL=$(sql_escape "$K")
         O_SQL=$(sql_escape "$O")
@@ -288,13 +363,14 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             INSERT INTO Bidrag (pseudonym, salt, passordhash, kommentar, offentlig_nokkel, tittel, tekst)
             VALUES ('$N_SQL', '$S', '$H', '$K_SQL', '$O_SQL', '$T_SQL', '$X_SQL')
         "
+        echo "Bidrag lagret."
     fi
     exit
 fi
 
 N_SQL=$(sql_escape "$N")
 S=$(sqlite3 "$DB" "SELECT salt FROM Bidrag WHERE pseudonym='$N_SQL'")
-if [ -z "$S" ]; then echo "Salt mangler" ; exit; fi
+if [ -z "$S" ]; then svar_mangler_bidrag_for_endre; fi
 
 H1=$(mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d'$')
 H2=$(sqlite3 "$DB" "SELECT passordhash FROM Bidrag WHERE pseudonym='$N_SQL'")
@@ -304,9 +380,13 @@ if [ "$H1" != "$H2" ]; then echo "Feil passord!" >&2 ; exit; fi
 case "$REQUEST_METHOD" in
     DELETE)
         sqlite3 "$DB" "DELETE FROM Bidrag WHERE pseudonym='$N_SQL'"
+        echo "Bidrag slettet."
         ;;
     PUT)
         valider_innhold
+        # start: Steg 7-validering ved oppdatering av kryptert kommentar - oppfyller F1 (privat kommentar) og NF1 (sikker ciphertext-lagring) (person 5)
+        valider_kryptert_kommentar
+        # slutt: Steg 7-validering ved oppdatering av kryptert kommentar - oppfyller F1 (privat kommentar) og NF1 (sikker ciphertext-lagring) (person 5)
         K_SQL=$(sql_escape "$K")
         O_SQL=$(sql_escape "$O")
         T_SQL=$(sql_escape "$T")
@@ -319,5 +399,6 @@ case "$REQUEST_METHOD" in
                tittel='$T_SQL',
                tekst='$X_SQL'
            WHERE pseudonym='$N_SQL'"
+        echo "Bidrag oppdatert."
         ;;
 esac

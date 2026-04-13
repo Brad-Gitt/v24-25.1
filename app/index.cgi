@@ -2,9 +2,20 @@
 
 # litt oppgradert CGI-script med bedre sikkerhet og logging (gdpr = mindre lekkasje av persondata)
 
+# start: CORS-støtte for steg 7-klientflyt - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
+echo "Access-Control-Allow-Origin: http://localhost:8080"
+echo "Access-Control-Allow-Credentials: true"
+echo "Access-Control-Allow-Methods: GET,POST,OPTIONS"
+echo "Access-Control-Allow-Headers: Content-Type"
+# slutt: CORS-støtte for steg 7-klientflyt - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
+
 # sender riktig header tilbake så nettleser skjønner responsen
 echo "Content-Type: text/plain; charset=utf-8"
 echo
+
+if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
+  exit 0
+fi
 
 # støtter nå både GET og POST, før var det bare POST
 if [ "$REQUEST_METHOD" != "POST" ] && [ "$REQUEST_METHOD" != "GET" ]; then
@@ -105,9 +116,14 @@ if [ -z "$H" ]; then
   exit 0
 fi
 
+# start: Loopback-ruting til herdede sidevogner på høye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
+URL_B_INTERNAL="http://127.0.0.1:8082/cgi-bin/index.cgi"
+URL_PN_INTERNAL="http://127.0.0.1:8083/cgi-bin/index.cgi"
+# slutt: Loopback-ruting til herdede sidevogner på høye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
+
 # offentlig liste skal ikke kreve epost eller passord
 if [ "$H" = "Liste" ]; then
-  URL_B="http://allpodd:82/cgi-bin/index.cgi"
+  URL_B="$URL_B_INTERNAL"
   echo "BIDRAG kall til: $URL_B - handling=$H" >&2
   SVAR=$(curl -s "$URL_B")
   skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag å vise."
@@ -120,7 +136,7 @@ if [ -z "$E" ]; then
   exit 0
 fi
 
-# krever passord for alle gjenvaerende steg 4-handlinger
+# krever passord for alle gjenværende steg 4-handlinger
 if [ -z "$P" ]; then
   echo "Passord mangler"
   exit 0
@@ -144,13 +160,13 @@ XML_PN="<pseudonym>
 <passord>${P_ESC}</passord>
 </pseudonym>"
 
-URL_PN="http://allpodd:83/cgi-bin/index.cgi"
+URL_PN="$URL_PN_INTERNAL"
 
 # logger hva vi kaller, men fortsatt anonymisert (gdpr = skjuler identitet i logs)
 echo "PN kall til: $URL_PN (masked=$MASKED_EMAIL)" >&2
 
 # henter pseudonym basert på input
-N=$(curl -s -d "$XML_PN" "$URL_PN") 
+N=$(curl -s -d "$XML_PN" "$URL_PN")
 
 if er_pseudonymfeil "$N"; then
   echo "$N"
@@ -180,7 +196,7 @@ XML_B="<bidrag>
 <handling>${H}</handling>
 </bidrag>"
 
-URL_B="http://allpodd:82/cgi-bin/index.cgi"
+URL_B="$URL_B_INTERNAL"
 
 # logger hvilken handling som kjøres
 echo "BIDRAG kall til: $URL_B - handling=$H" >&2

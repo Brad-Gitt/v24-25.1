@@ -8,6 +8,8 @@ metadata:
     app: allpodd
     component: bidrag-db
     tier: backend
+    data-classification: restricted-user-content
+    security: hardened
     # slutt: Identifikasjonsetiketter for backend-lagringsressurs - oppfyller NF6 (merking av skyverdier) (person 4)
 spec:
   accessModes:
@@ -25,6 +27,8 @@ metadata:
     app: allpodd
     component: pseudonym-db
     tier: backend
+    data-classification: personal-data
+    security: hardened
     # slutt: Identifikasjonsetiketter for backend-lagringsressurs - oppfyller NF6 (merking av skyverdier) (person 4)
 spec:
   accessModes:
