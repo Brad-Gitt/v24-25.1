@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  labels:
+    app: web
+    component: gateway
+    tier: edge
+    security: hardened
+spec:
+  type: NodePort
+  selector:
+    app: web
+  ports:
+    - name: https
+      nodePort: 30443
+      port: 443
+      targetPort: 8443
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web
+  labels:
+    app: web
+    component: web-stack
+    tier: edge
+    security: hardened
+spec:
+  serviceAccountName: allpodd-sa
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+    fsGroup: 10001
+  terminationGracePeriodSeconds: 10
+  containers:
+    - name: tls-gateway
+      image: localhost/tls-gateway:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 8443
+          name: https
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+      resources:
+        requests:
+          cpu: "25m"
+          memory: "48Mi"
+        limits:
+          cpu: "100m"
+          memory: "96Mi"
+      readinessProbe:
+        tcpSocket:
+          port: 8443
+        periodSeconds: 10
+        timeoutSeconds: 3
+      livenessProbe:
+        tcpSocket:
+          port: 8443
+        initialDelaySeconds: 15
+        periodSeconds: 20
+        timeoutSeconds: 3
+      startupProbe:
+        tcpSocket:
+          port: 8443
+        periodSeconds: 5
+        failureThreshold: 12
+      volumeMounts:
+        - name: tls-certificates
+          mountPath: /run/secrets/tls
+          readOnly: true
+        - name: tls-tmp
+          mountPath: /tmp
+    - name: web
+      image: localhost/web:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 8080
+          name: web
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+      resources:
+        requests:
+          cpu: "25m"
+          memory: "48Mi"
+        limits:
+          cpu: "100m"
+          memory: "96Mi"
+      readinessProbe:
+        exec:
+          command: ["sh", "-c", "nc -z 127.0.0.1 8080"]
+        periodSeconds: 10
+        timeoutSeconds: 3
+      livenessProbe:
+        exec:
+          command: ["sh", "-c", "nc -z 127.0.0.1 8080"]
+        initialDelaySeconds: 15
+        periodSeconds: 20
+        timeoutSeconds: 3
+      startupProbe:
+        exec:
+          command: ["sh", "-c", "nc -z 127.0.0.1 8080"]
+        periodSeconds: 5
+        failureThreshold: 12
+      volumeMounts:
+        - name: web-tmp
+          mountPath: /tmp
+  volumes:
+    - name: tls-certificates
+      secret:
+        secretName: allpodd-tls
+    - name: tls-tmp
+      emptyDir: {}
+    - name: web-tmp
+      emptyDir: {}
