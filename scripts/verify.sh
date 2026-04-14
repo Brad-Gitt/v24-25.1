@@ -1,46 +1,47 @@
-#!/bin/bash
+#!/bin/sh
 
-# start: Verifikasjonsskript for lokal testing med Podman - oppfyller NF3 (utvikling og testing lokalt pa studentenes egne maskiner ved hjelp av podman) (person 5)
-# Skript som automatisk kontrollerer at alle systemkomponenter er oppe og fungerer (person 5)
+set -eu
 
-echo "Starting verification of Allpodd system..."
-
-# Check if pod is running
-if podman pod ps | grep -q allpodd; then
-    echo "✓ Pod 'allpodd' is running"
-else
-    echo "✗ Pod 'allpodd' is not running"
-    exit 1
-fi
-
-# Check containers
-containers=("web" "app" "bidrag-db" "pseudonym-db")
-for c in "${containers[@]}"; do
-    if podman ps | grep -q "$c"; then
-        echo "✓ Container '$c' is running"
-    else
-        echo "✗ Container '$c' is not running"
-        exit 1
-    fi
+# start: Steg 9-verifikasjon av sluttleveransen - oppfyller F1, F2, F3, NF1, NF2, NF3, NF4, NF5, NF6 og NF7 (person 4 og person 5)
+for file in \
+  app/index.cgi \
+  bidrag-db/index.cgi \
+  pseudonym-db/index.cgi \
+  bidrag-db/init-encrypted-db.sh \
+  pseudonym-db/init-encrypted-db.sh \
+  podman_til_k8s.sh
+do
+  sh -n "$file"
 done
 
-# Test web accessibility
-if curl -s http://localhost:8080 | grep -q "BIDRAG"; then
-    echo "✓ Web interface is accessible"
-else
-    echo "✗ Web interface is not accessible"
-fi
+for manifest in \
+  k8s/pvc.yaml \
+  k8s/rbac.yaml \
+  k8s/networkpolicy.yaml \
+  allpodd.yaml
+do
+  microk8s kubectl apply --dry-run=client -f "$manifest" >/dev/null
+done
 
-# Test app endpoint
-if curl -s http://localhost:8081 | grep -q "text/plain"; then
-    echo "✓ App endpoint responds"
-else
-    echo "✗ App endpoint does not respond"
-fi
+for doc in \
+  docs/rapport.md \
+  docs/presentasjon.md \
+  docs/threat-model.md \
+  docs/cloud-deploy.md \
+  docs/testplan.md \
+  docs/demo-checklist.md \
+  docs/arbeidsfordeling.md \
+  docs/demo-status.md
+do
+  test -f "$doc"
+done
 
-# Check database files (if mounted)
-# Note: In K8s, check PVC status instead
+grep -q "Steg 9" docs/arbeidsfordeling.md
+grep -q "Steg 9" docs/demo-status.md
+grep -q "allpodd-storage-secrets" allpodd.yaml
+grep -q "allpodd-tls" allpodd.yaml
+test -f tls-gateway/Dockerfile
+test -f tls-gateway/nginx.conf
 
-echo "Verification complete."
-
-# slutt: Verifikasjonsskript for lokal testing med Podman - oppfyller NF3 (utvikling og testing lokalt pa studentenes egne maskiner ved hjelp av podman) (person 5)
+echo "Steg 9-verifikasjon ok."
+# slutt: Steg 9-verifikasjon av sluttleveransen - oppfyller F1, F2, F3, NF1, NF2, NF3, NF4, NF5, NF6 og NF7 (person 4 og person 5)

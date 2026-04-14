@@ -1,4 +1,4 @@
-# start: NetworkPolicy som begrenser ytre angrepsflate til web og app - oppfyller NF1 (defense in depth og zero trust) og NF2 (Kubernetes) (person 4)
+# start: NetworkPolicy som begrenser ytre angrepsflate til TLS-gatewayen - oppfyller NF1 (defense in depth og zero trust), NF2 (Kubernetes) og NF7 (HTTPS-eksponering) (person 4 og person 5)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -23,7 +23,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allpodd-allow-web-and-app
+  name: allpodd-allow-https-only
   labels:
     # start: Identifikasjonsetiketter for nettverkspolicy - oppfyller NF6 (merking av skyverdier) (person 4)
     app: allpodd
@@ -41,8 +41,6 @@ spec:
   ingress:
     - ports:
         - protocol: TCP
-          port: 8080
-        - protocol: TCP
-          port: 8081
+          port: 8443
   egress: []
-# slutt: NetworkPolicy som begrenser ytre angrepsflate til web og app - oppfyller NF1 (defense in depth og zero trust) og NF2 (Kubernetes) (person 4)
+# slutt: NetworkPolicy som begrenser ytre angrepsflate til TLS-gatewayen - oppfyller NF1 (defense in depth og zero trust), NF2 (Kubernetes) og NF7 (HTTPS-eksponering) (person 4 og person 5)

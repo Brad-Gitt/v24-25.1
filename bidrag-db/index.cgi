@@ -1,11 +1,47 @@
-#!/bin/sh
+﻿#!/bin/sh
 
-# start: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
+# start: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjÃ¸ring) (person 4)
 DB="${BIDRAG_DB_PATH:-../bidrag.db}"
 PSEUDONYM_INTERNAL_URL="${PSEUDONYM_INTERNAL_URL:-http://127.0.0.1:8083/cgi-bin/index.cgi}"
-# slutt: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
 
-# start: Person 2 – innhold + visninger (F1, F2, NF1)
+# start: SQLCipher-nokkel fra Kubernetes Secret i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nokkelhandtering) (person 4 og person 5)
+KEY_FILE="${BIDRAG_DB_KEY_FILE:-/run/secrets/storage/bidrag-db-key}"
+
+les_hemmelighet() {
+    FIL="$1"
+
+    if [ ! -s "$FIL" ]; then
+        echo "Manglende databasenokkel." >&2
+        exit 1
+    fi
+
+    tr -d '\r\n' < "$FIL"
+}
+
+sqlcipher_escape() {
+    printf '%s' "$1" | sed "s/'/''/g"
+}
+
+SQLCIPHER_KEY=$(les_hemmelighet "$KEY_FILE")
+SQLCIPHER_KEY_SQL=$(sqlcipher_escape "$SQLCIPHER_KEY")
+
+db_query() {
+    sqlcipher "$DB" <<EOF
+PRAGMA key = '$SQLCIPHER_KEY_SQL';
+$1
+EOF
+}
+
+db_query_line() {
+    sqlcipher -line "$DB" <<EOF
+PRAGMA key = '$SQLCIPHER_KEY_SQL';
+$1
+EOF
+}
+# slutt: SQLCipher-nokkel fra Kubernetes Secret i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nokkelhandtering) (person 4 og person 5)
+# slutt: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjÃ¸ring) (person 4)
+
+# start: Person 2 â€“ innhold + visninger (F1, F2, NF1)
 url_param() {
     KEY="$1"
     echo "$QUERY_STRING" | tr '&' '\n' | awk -F= -v k="$KEY" '$1==k { print substr($0, index($0, "=")+1); exit }'
@@ -55,10 +91,10 @@ valider_innhold() {
     valider_lengde "Tittel" "$T" 100
     valider_lengde "Kommentar" "$K" 1000
     valider_lengde "Tekst" "$X" 1000
-    valider_lengde "Offentlig nøkkel" "$O" 200
+    valider_lengde "Offentlig nÃ¸kkel" "$O" 200
 
     if [ -z "$T" ] && [ -z "$X" ]; then
-        echo "Minst ett av feltene tittel eller tekst må fylles ut."
+        echo "Minst ett av feltene tittel eller tekst mÃ¥ fylles ut."
         exit 1
     fi
 }
@@ -72,13 +108,13 @@ autentiser_bidragseier() {
     fi
 
     PN_SQL=$(sql_escape "$PN")
-    S=$(sqlite3 "$DB" "SELECT salt FROM Bidrag WHERE pseudonym='$PN_SQL'")
+    S=$(db_query "SELECT salt FROM Bidrag WHERE pseudonym='$PN_SQL';")
     if [ -z "$S" ]; then
         return 1
     fi
 
     H1=$(mkpasswd -m sha-256 -S "$S" "$PW" | cut -f4 -d'$')
-    H2=$(sqlite3 "$DB" "SELECT passordhash FROM Bidrag WHERE pseudonym='$PN_SQL'")
+    H2=$(db_query "SELECT passordhash FROM Bidrag WHERE pseudonym='$PN_SQL';")
 
     [ "$H1" = "$H2" ]
 }
@@ -86,16 +122,16 @@ autentiser_bidragseier() {
 # start: Skiller mellom manglende bidrag og autentiseringsfeil i Min-visning - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1 og person 2)
 har_bidrag() {
     PN_SQL=$(sql_escape "$1")
-    sqlite3 "$DB" "SELECT 1 FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1"
+    db_query "SELECT 1 FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1;"
 }
 # slutt: Skiller mellom manglende bidrag og autentiseringsfeil i Min-visning - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1 og person 2)
 
-# start: Tydelig feilmelding når Endre brukes uten eksisterende bidrag - oppfyller F1 (brukerflyt) og NF1 (integritet i tilbakemeldinger) (person 2)
+# start: Tydelig feilmelding nÃ¥r Endre brukes uten eksisterende bidrag - oppfyller F1 (brukerflyt) og NF1 (integritet i tilbakemeldinger) (person 2)
 svar_mangler_bidrag_for_endre() {
-    echo "Ingen eksisterende bidrag å endre. Bruk Ny."
+    echo "Ingen eksisterende bidrag Ã¥ endre. Bruk Ny."
     exit
 }
-# slutt: Tydelig feilmelding når Endre brukes uten eksisterende bidrag - oppfyller F1 (brukerflyt) og NF1 (integritet i tilbakemeldinger) (person 2)
+# slutt: Tydelig feilmelding nÃ¥r Endre brukes uten eksisterende bidrag - oppfyller F1 (brukerflyt) og NF1 (integritet i tilbakemeldinger) (person 2)
 
 # start: Admin-autorisering med dobbel sjekk mot pseudonym-db - oppfyller F2 (admin-visning med pseudonym) og NF1 (forsvar i dybden) (person 3 og person 5)
 er_adminbruker() {
@@ -118,7 +154,7 @@ er_adminbruker() {
 # slutt: Admin-autorisering med dobbel sjekk mot pseudonym-db - oppfyller F2 (admin-visning med pseudonym) og NF1 (forsvar i dybden) (person 3 og person 5)
 
 vis_offentlig_liste() {
-    sqlite3 -line "$DB" "
+    db_query_line "
         SELECT
             coalesce(trim(tittel), '') AS tittel,
             coalesce(trim(tekst), '') AS tekst
@@ -130,7 +166,7 @@ vis_offentlig_liste() {
 }
 
 vis_admin_liste() {
-    sqlite3 -line "$DB" "
+    db_query_line "
         SELECT
             pseudonym AS pseudonym,
             coalesce(trim(tittel), '') AS tittel,
@@ -155,7 +191,7 @@ vis_min_visning() {
     "
 }
 
-# start: Steg 7-tilpasning for ciphertext og egen visning - oppfyller F1 (privat kommentar for bruker) og NF1 (sikker håndtering av ciphertext i backend) (person 5)
+# start: Steg 7-tilpasning for ciphertext og egen visning - oppfyller F1 (privat kommentar for bruker) og NF1 (sikker hÃ¥ndtering av ciphertext i backend) (person 5)
 er_krypteringsmetadata() {
     printf '%s' "$1" | grep -Eq '^enc-v1\|[0-9]+\|[A-Za-z0-9+/=]+\|[A-Za-z0-9+/=]+$'
 }
@@ -167,7 +203,7 @@ valider_kryptert_kommentar() {
     fi
 
     if [ -n "$K" ] && [ -z "$O" ]; then
-        echo "Kommentar må sendes kryptert med metadata."
+        echo "Kommentar mÃ¥ sendes kryptert med metadata."
         exit 1
     fi
 
@@ -199,7 +235,7 @@ hent_bidragsfelt() {
             ;;
     esac
 
-    sqlite3 "$DB" "SELECT $SQL_FELT FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1"
+    db_query "SELECT $SQL_FELT FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1;"
 }
 
 vis_min_visning() {
@@ -215,7 +251,7 @@ vis_min_visning() {
         "$(xml_escape "$KOMMENTAR_VERDI")" \
         "$(xml_escape "$NOKKEL_VERDI")"
 }
-# slutt: Steg 7-tilpasning for ciphertext og egen visning - oppfyller F1 (privat kommentar for bruker) og NF1 (sikker håndtering av ciphertext i backend) (person 5)
+# slutt: Steg 7-tilpasning for ciphertext og egen visning - oppfyller F1 (privat kommentar for bruker) og NF1 (sikker hÃ¥ndtering av ciphertext i backend) (person 5)
 
 logg_innholdsoperasjon() {
     HAR_TITTEL=nei
@@ -228,10 +264,10 @@ logg_innholdsoperasjon() {
 
     echo "bidrag-db $REQUEST_METHOD visning=${VISNING:-skriv} tittel=$HAR_TITTEL tekst=$HAR_TEKST kommentar=$HAR_KOMMENTAR" >&2
 }
-# slutt: Person 2 – innhold + visninger (F1, F2, NF1)
+# slutt: Person 2 â€“ innhold + visninger (F1, F2, NF1)
 
 cat <<EOF
-Access-Control-Allow-Origin: http://localhost:8080
+Access-Control-Allow-Origin: https://localhost:8443
 Access-Control-Allow-Credentials: true
 Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS
 Access-Control-Allow-Headers: Content-Type
@@ -291,7 +327,7 @@ fi
 KR=$(head -c "$CONTENT_LENGTH")
 
 N=$(xml_felt navn)
-N=$(trim "$N") # Person 1 fjernet whitespace fra pseudonym så DB matcher
+N=$(trim "$N") # Person 1 fjernet whitespace fra pseudonym sÃ¥ DB matcher
 echo "DEBUG navn=$N" >&2
 E=$(xml_felt epost)
 P=$(xml_felt passord)
@@ -350,7 +386,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         T_SQL=$(sql_escape "$T")
         X_SQL=$(sql_escape "$X")
 
-        FINNES=$(sqlite3 "$DB" "SELECT 1 FROM Bidrag WHERE pseudonym='$N_SQL'")
+        FINNES=$(db_query "SELECT 1 FROM Bidrag WHERE pseudonym='$N_SQL';")
         if [ -n "$FINNES" ]; then
             echo "Bidrag finnes allerede for dette pseudonymet. Bruk Endre."
             exit
@@ -359,9 +395,9 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         S=$(tr -dc '0-9' </dev/urandom | head -c 11)
         H=$(mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d'$')
 
-        sqlite3 "$DB" "
+        db_query "
             INSERT INTO Bidrag (pseudonym, salt, passordhash, kommentar, offentlig_nokkel, tittel, tekst)
-            VALUES ('$N_SQL', '$S', '$H', '$K_SQL', '$O_SQL', '$T_SQL', '$X_SQL')
+            VALUES ('$N_SQL', '$S', '$H', '$K_SQL', '$O_SQL', '$T_SQL', '$X_SQL');
         "
         echo "Bidrag lagret."
     fi
@@ -369,17 +405,17 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 fi
 
 N_SQL=$(sql_escape "$N")
-S=$(sqlite3 "$DB" "SELECT salt FROM Bidrag WHERE pseudonym='$N_SQL'")
+S=$(db_query "SELECT salt FROM Bidrag WHERE pseudonym='$N_SQL';")
 if [ -z "$S" ]; then svar_mangler_bidrag_for_endre; fi
 
 H1=$(mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d'$')
-H2=$(sqlite3 "$DB" "SELECT passordhash FROM Bidrag WHERE pseudonym='$N_SQL'")
+H2=$(db_query "SELECT passordhash FROM Bidrag WHERE pseudonym='$N_SQL';")
 
 if [ "$H1" != "$H2" ]; then echo "Feil passord!" >&2 ; exit; fi
 
 case "$REQUEST_METHOD" in
     DELETE)
-        sqlite3 "$DB" "DELETE FROM Bidrag WHERE pseudonym='$N_SQL'"
+        db_query "DELETE FROM Bidrag WHERE pseudonym='$N_SQL';"
         echo "Bidrag slettet."
         ;;
     PUT)
@@ -392,13 +428,14 @@ case "$REQUEST_METHOD" in
         T_SQL=$(sql_escape "$T")
         X_SQL=$(sql_escape "$X")
 
-        sqlite3 "$DB" "
+        db_query "
            UPDATE Bidrag SET
                kommentar='$K_SQL',
                offentlig_nokkel='$O_SQL',
                tittel='$T_SQL',
                tekst='$X_SQL'
-           WHERE pseudonym='$N_SQL'"
+           WHERE pseudonym='$N_SQL';"
         echo "Bidrag oppdatert."
         ;;
 esac
+

@@ -1,15 +1,15 @@
-#!/bin/sh
+﻿#!/bin/sh
 
 # litt oppgradert CGI-script med bedre sikkerhet og logging (gdpr = mindre lekkasje av persondata)
 
-# start: CORS-støtte for steg 7-klientflyt - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
-echo "Access-Control-Allow-Origin: http://localhost:8080"
+# start: CORS-stÃ¸tte for steg 7-klientflyt - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
+echo "Access-Control-Allow-Origin: https://localhost:8443"
 echo "Access-Control-Allow-Credentials: true"
 echo "Access-Control-Allow-Methods: GET,POST,OPTIONS"
 echo "Access-Control-Allow-Headers: Content-Type"
-# slutt: CORS-støtte for steg 7-klientflyt - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
+# slutt: CORS-stÃ¸tte for steg 7-klientflyt - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
 
-# sender riktig header tilbake så nettleser skjønner responsen
+# sender riktig header tilbake sÃ¥ nettleser skjÃ¸nner responsen
 echo "Content-Type: text/plain; charset=utf-8"
 echo
 
@@ -17,7 +17,7 @@ if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
   exit 0
 fi
 
-# støtter nå både GET og POST, før var det bare POST
+# stÃ¸tter nÃ¥ bÃ¥de GET og POST, fÃ¸r var det bare POST
 if [ "$REQUEST_METHOD" != "POST" ] && [ "$REQUEST_METHOD" != "GET" ]; then
   echo "Feil metode: $REQUEST_METHOD" >&2
   exit 0
@@ -39,7 +39,7 @@ urldecode() {
   printf '%b' "$DATA"
 }
 
-# escaper spesialtegn så vi unngår XML injection (gdpr = hindrer manipulering av lagret data)
+# escaper spesialtegn sÃ¥ vi unngÃ¥r XML injection (gdpr = hindrer manipulering av lagret data)
 xml_escape() {
   printf '%s' "$1" | sed \
     -e 's/&/\&amp;/g' \
@@ -49,7 +49,7 @@ xml_escape() {
     -e "s/'/\&apos;/g"
 }
 
-# masker epost før logging så vi ikke lekker data (gdpr = anonymisering i logger)
+# masker epost fÃ¸r logging sÃ¥ vi ikke lekker data (gdpr = anonymisering i logger)
 mask_email() {
   printf '%s' "$1" | sed 's/^\(.\).*\(@.*\)$/\1***\2/; t; s/.*/***/'
 }
@@ -83,7 +83,7 @@ er_adminpseudonym() {
 }
 # slutt: Admin-routing med tilgangsbegrensning - oppfyller F2 (admin-visning med pseudonym) og NF1 (forsvar i dybden) (person 3 og person 5)
 
-# parser input på en tryggere måte enn før (ikke cut/for loop) (gdpr = mindre risiko for feil håndtering)
+# parser input pÃ¥ en tryggere mÃ¥te enn fÃ¸r (ikke cut/for loop) (gdpr = mindre risiko for feil hÃ¥ndtering)
 TMP="/tmp/body.$$"
 printf '%s\n' "$KROPP" | tr '&' '\n' > "$TMP"
 
@@ -107,46 +107,46 @@ while IFS= read -r pair; do
   esac
 done < "$TMP"
 
-# rydder opp temp-fil etter bruk (gdpr = unngår lagring av sensitiv data)
+# rydder opp temp-fil etter bruk (gdpr = unngÃ¥r lagring av sensitiv data)
 rm -f "$TMP"
 
-# grunnleggende validering av handling før videre ruting
+# grunnleggende validering av handling fÃ¸r videre ruting
 if [ -z "$H" ]; then
   echo "Handling mangler"
   exit 0
 fi
 
-# start: Loopback-ruting til herdede sidevogner på høye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
+# start: Loopback-ruting til herdede sidevogner pÃ¥ hÃ¸ye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjÃ¸ring i Kubernetes) (person 4)
 URL_B_INTERNAL="http://127.0.0.1:8082/cgi-bin/index.cgi"
 URL_PN_INTERNAL="http://127.0.0.1:8083/cgi-bin/index.cgi"
-# slutt: Loopback-ruting til herdede sidevogner på høye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
+# slutt: Loopback-ruting til herdede sidevogner pÃ¥ hÃ¸ye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjÃ¸ring i Kubernetes) (person 4)
 
 # offentlig liste skal ikke kreve epost eller passord
 if [ "$H" = "Liste" ]; then
   URL_B="$URL_B_INTERNAL"
   echo "BIDRAG kall til: $URL_B - handling=$H" >&2
   SVAR=$(curl -s "$URL_B")
-  skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag å vise."
+  skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag Ã¥ vise."
   exit 0
 fi
 
-# basic validering så vi ikke sender tom data videre (gdpr = dataminimering)
+# basic validering sÃ¥ vi ikke sender tom data videre (gdpr = dataminimering)
 if [ -z "$E" ]; then
   echo "Epost mangler"
   exit 0
 fi
 
-# krever passord for alle gjenværende steg 4-handlinger
+# krever passord for alle gjenvÃ¦rende steg 4-handlinger
 if [ -z "$P" ]; then
   echo "Passord mangler"
   exit 0
 fi
 
-# logger request, men uten sensitiv info som før (gdpr = begrenser eksponering i logger)
+# logger request, men uten sensitiv info som fÃ¸r (gdpr = begrenser eksponering i logger)
 MASKED_EMAIL=$(mask_email "$E")
 echo "app: request mottatt - epost=$MASKED_EMAIL handling=$H" >&2
 
-# escaper alt før vi sender det videre (nytt i min versjon) (gdpr = beskytter data før lagring/overføring)
+# escaper alt fÃ¸r vi sender det videre (nytt i min versjon) (gdpr = beskytter data fÃ¸r lagring/overfÃ¸ring)
 E_ESC=$(xml_escape "$E")
 P_ESC=$(xml_escape "$P")
 K_ESC=$(xml_escape "$K")
@@ -165,7 +165,7 @@ URL_PN="$URL_PN_INTERNAL"
 # logger hva vi kaller, men fortsatt anonymisert (gdpr = skjuler identitet i logs)
 echo "PN kall til: $URL_PN (masked=$MASKED_EMAIL)" >&2
 
-# henter pseudonym basert på input
+# henter pseudonym basert pÃ¥ input
 N=$(curl -s -d "$XML_PN" "$URL_PN")
 
 if er_pseudonymfeil "$N"; then
@@ -173,7 +173,7 @@ if er_pseudonymfeil "$N"; then
   exit 0
 fi
 
-# stopper hvis vi ikke får noe tilbake
+# stopper hvis vi ikke fÃ¥r noe tilbake
 if [ -z "$N" ]; then
   echo "Pseudonym mangler!"
   exit 0
@@ -198,7 +198,7 @@ XML_B="<bidrag>
 
 URL_B="$URL_B_INTERNAL"
 
-# logger hvilken handling som kjøres
+# logger hvilken handling som kjÃ¸res
 echo "BIDRAG kall til: $URL_B - handling=$H" >&2
 
 # mye ryddigere enn originalen med if-if-if
@@ -226,7 +226,7 @@ case "$H" in
 
   Admin)
     SVAR=$(curl -s -X POST -d "$XML_B" "$URL_B")
-    skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag å vise."
+    skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag Ã¥ vise."
     ;;
   *)
     echo "Ukjent handling"
@@ -234,3 +234,4 @@ case "$H" in
 esac
 
 exit 0
+

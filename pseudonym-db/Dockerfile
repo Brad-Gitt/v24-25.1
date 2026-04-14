@@ -1,27 +1,13 @@
 FROM alpine
-RUN apk add busybox-extras libxml2-utils sqlite
+# start: SQLCipher for kryptert pseudonym-lagring i steg 9 - oppfyller F3 (persistens) og NF7 (kryptering av data at rest) (person 4 og person 5)
+RUN apk add busybox-extras libxml2-utils sqlcipher
 COPY index.cgi /var/www/cgi-bin/
+COPY init.sql /var/www/init.sql
+COPY init-encrypted-db.sh /var/www/init-encrypted-db.sh
+# slutt: SQLCipher for kryptert pseudonym-lagring i steg 9 - oppfyller F3 (persistens) og NF7 (kryptering av data at rest) (person 4 og person 5)
 
-RUN echo "CREATE TABLE Pseudonym (           \
-  epost         VARCHAR(200) PRIMARY KEY, \
-  pseudonym     VARCHAR(200),             \
-  salt          VARCHAR(11),              \
-  passordhash   VARCHAR(44))" | sqlite3 /var/www/pseudonym.db
-
-# for I in Ante Bjart Cecilie; do echo "$I@example.com" | pwgen  8 1 -0 -A -H /dev/stdin;done
-# for I in 123 234 345; do mkpasswd -m sha-256 -S $(date +%s) $I;sleep 1;done
-
-RUN echo "INSERT INTO Pseudonym (epost, pseudonym, salt, passordhash) VALUES                \
-   ('Ante@example.com'   ,'osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA' ), \
-   ('Bjart@example.com'  ,'uozaixav', '1712167671', 'q37QpOdM2jSDeXOVAyiCSzMgy08dI7pLQ1aBElJps48' ), \
-   ('Cecilie@example.com','olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA' ), \
-   ('mikke@gmail.com','admin','12345678901','x4kxRrzfJD4PBaEA6qKjP5Q7tl75ODtubn3zHpcyma9'), \
-   ('test_admin@usn.com','admin','12345678902','bVNOzIEuSPJxlueGS8Xlx.nNCWkfcUfqn.MkuEqEKv0')" \
-   | sqlite3 /var/www/pseudonym.db
-
-# start: Klargjør CGI og høy intern port for non-root-kjøring i Kubernetes - oppfyller NF1 (minste privilegium) og NF3 (stabil lokal drift) (person 4)
-RUN chmod +x /var/www/cgi-bin/index.cgi \
- && chmod a+w /var/www/pseudonym.db
+# start: Klargjor CGI og kryptert init-script for pseudonym-databasen i steg 9 - oppfyller F3 (persistens) og NF7 (kryptert lagring) (person 4 og person 5)
+RUN chmod +x /var/www/cgi-bin/index.cgi /var/www/init-encrypted-db.sh
 EXPOSE 8083
 CMD httpd -p 8083 -h /var/www -f -vv
-# slutt: Klargjør CGI og høy intern port for non-root-kjøring i Kubernetes - oppfyller NF1 (minste privilegium) og NF3 (stabil lokal drift) (person 4)
+# slutt: Klargjor CGI og kryptert init-script for pseudonym-databasen i steg 9 - oppfyller F3 (persistens) og NF7 (kryptert lagring) (person 4 og person 5)

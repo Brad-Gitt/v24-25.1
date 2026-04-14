@@ -1,4 +1,4 @@
-# start: Herdet service- og podmanifest for steg 8 - oppfyller NF1 (least privilege og defense in depth), NF2 (Kubernetes), NF3 (lokal kjøring) og deler av NF7 (recovery) (person 4)
+﻿# start: Herdet service- og podmanifest for steg 8 - oppfyller NF1 (least privilege og defense in depth), NF2 (Kubernetes), NF3 (lokal kjøring) og deler av NF7 (recovery) (person 4)
 apiVersion: v1
 kind: Service
 metadata:
@@ -15,14 +15,12 @@ spec:
   selector:
     app: allpodd
   ports:
-    - name: web
-      nodePort: 32199
-      port: 80
-      targetPort: 8080
-    - name: app
-      nodePort: 30921
-      port: 81
-      targetPort: 8081
+    # start: HTTPS-eksponering via dedikert TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og NF1 (redusert angrepsflate) (person 4 og person 5)
+    - name: https
+      nodePort: 30443
+      port: 443
+      targetPort: 8443
+    # slutt: HTTPS-eksponering via dedikert TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og NF1 (redusert angrepsflate) (person 4 og person 5)
 ---
 apiVersion: v1
 kind: Pod
@@ -54,34 +52,76 @@ spec:
       image: localhost/bidrag-db:latest
       imagePullPolicy: Never
       command:
-        - sh
-        - -c
-        - |
-          if [ ! -f /data/bidrag.db ]; then
-            cp /var/www/bidrag.db /data/bidrag.db
-          fi
-          chown 10001:10001 /data/bidrag.db
-          chmod 660 /data/bidrag.db
+        - /var/www/init-encrypted-db.sh
+        - /data/bidrag.db
+        - /run/secrets/storage/bidrag-db-key
       volumeMounts:
         - name: bidrag-db-data
           mountPath: /data
+        - name: storage-key-material
+          mountPath: /run/secrets/storage
+          readOnly: true
     - name: seed-pseudonym-db
       image: localhost/pseudonym-db:latest
       imagePullPolicy: Never
       command:
-        - sh
-        - -c
-        - |
-          if [ ! -f /data/pseudonym.db ]; then
-            cp /var/www/pseudonym.db /data/pseudonym.db
-          fi
-          chown 10001:10001 /data/pseudonym.db
-          chmod 660 /data/pseudonym.db
+        - /var/www/init-encrypted-db.sh
+        - /data/pseudonym.db
+        - /run/secrets/storage/pseudonym-db-key
       volumeMounts:
         - name: pseudonym-db-data
           mountPath: /data
+        - name: storage-key-material
+          mountPath: /run/secrets/storage
+          readOnly: true
   # slutt: Init-containere som seed-er persistente databaser før oppstart - oppfyller F3 (persistens) og deler av NF7 (recovery) (person 4)
   containers:
+    - name: tls-gateway
+      image: localhost/tls-gateway:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 8443
+          name: https
+      # start: TLS-gateway med cert-secret og samme-origin proxy i steg 9 - oppfyller NF7 (TLS/HTTPS og nøkkelhåndtering) og NF1 (forsvar i dybden) (person 4 og person 5)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+      resources:
+        requests:
+          cpu: "25m"
+          memory: "48Mi"
+        limits:
+          cpu: "100m"
+          memory: "96Mi"
+      readinessProbe:
+        tcpSocket:
+          port: 8443
+        periodSeconds: 10
+        timeoutSeconds: 3
+      livenessProbe:
+        tcpSocket:
+          port: 8443
+        initialDelaySeconds: 15
+        periodSeconds: 20
+        timeoutSeconds: 3
+      startupProbe:
+        tcpSocket:
+          port: 8443
+        periodSeconds: 5
+        failureThreshold: 12
+      volumeMounts:
+        - name: tls-certificates
+          mountPath: /run/secrets/tls
+          readOnly: true
+        - name: tls-tmp
+          mountPath: /tmp
+      # slutt: TLS-gateway med cert-secret og samme-origin proxy i steg 9 - oppfyller NF7 (TLS/HTTPS og nøkkelhåndtering) og NF1 (forsvar i dybden) (person 4 og person 5)
     - name: app
       image: localhost/app:latest
       imagePullPolicy: Never
@@ -144,6 +184,8 @@ spec:
       env:
         - name: BIDRAG_DB_PATH
           value: /data/bidrag.db
+        - name: BIDRAG_DB_KEY_FILE
+          value: /run/secrets/storage/bidrag-db-key
         - name: PSEUDONYM_INTERNAL_URL
           value: http://127.0.0.1:8083/cgi-bin/index.cgi
       resources:
@@ -172,6 +214,9 @@ spec:
       volumeMounts:
         - name: bidrag-db-data
           mountPath: /data
+        - name: storage-key-material
+          mountPath: /run/secrets/storage
+          readOnly: true
         - name: bidrag-tmp
           mountPath: /tmp
       # slutt: Container-hardening for bidrag-databasen - oppfyller NF1 (minste privilegium og defense in depth), F3 (persistens) og deler av NF7 (recovery) (person 4)
@@ -194,6 +239,8 @@ spec:
       env:
         - name: PSEUDONYM_DB_PATH
           value: /data/pseudonym.db
+        - name: PSEUDONYM_DB_KEY_FILE
+          value: /run/secrets/storage/pseudonym-db-key
       resources:
         requests:
           cpu: "25m"
@@ -220,6 +267,9 @@ spec:
       volumeMounts:
         - name: pseudonym-db-data
           mountPath: /data
+        - name: storage-key-material
+          mountPath: /run/secrets/storage
+          readOnly: true
         - name: pseudonym-tmp
           mountPath: /tmp
       # slutt: Container-hardening for pseudonym-databasen - oppfyller NF1 (minste privilegium og defense in depth), F3 (persistens) og deler av NF7 (recovery) (person 4)
@@ -274,6 +324,14 @@ spec:
     - name: pseudonym-db-data
       persistentVolumeClaim:
         claimName: pseudonym-pvc
+    # start: Secret-volumer for TLS-sertifikat og databasenokler i steg 9 - oppfyller NF1 (ingen hemmeligheter i image/repo) og NF7 (TLS, nokkelhandtering og kryptert lagring) (person 4 og person 5)
+    - name: storage-key-material
+      secret:
+        secretName: allpodd-storage-secrets
+    - name: tls-certificates
+      secret:
+        secretName: allpodd-tls
+    # slutt: Secret-volumer for TLS-sertifikat og databasenokler i steg 9 - oppfyller NF1 (ingen hemmeligheter i image/repo) og NF7 (TLS, nokkelhandtering og kryptert lagring) (person 4 og person 5)
     - name: app-tmp
       emptyDir: {}
     - name: bidrag-tmp
@@ -282,5 +340,8 @@ spec:
       emptyDir: {}
     - name: web-tmp
       emptyDir: {}
+    - name: tls-tmp
+      emptyDir: {}
   # slutt: PVC-er og isolerte tmp-volumer for skrivebehov - oppfyller F3 (persistens), NF1 (read-only root filesystem) og deler av NF7 (recovery) (person 4)
 # slutt: Herdet service- og podmanifest for steg 8 - oppfyller NF1 (least privilege og defense in depth), NF2 (Kubernetes), NF3 (lokal kjøring) og deler av NF7 (recovery) (person 4)
+

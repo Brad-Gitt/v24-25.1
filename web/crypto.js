@@ -1,4 +1,4 @@
-// start: Klientside-kryptering av kommentar før innsending - oppfyller F1 (privat kommentar) og NF7 (kryptering og nøkkelhåndtering i klient) (person 3)
+﻿// start: Klientside-kryptering av kommentar før innsending - oppfyller F1 (privat kommentar) og NF7 (kryptering og nøkkelhåndtering i klient) (person 3)
 const form = document.querySelector("#bidrag-form");
 
 if (form) {
@@ -10,7 +10,9 @@ if (form) {
   const metadataField = document.querySelector("#offentlig_nokkel");
   const responseField = document.querySelector("#respons-felt");
   const submitButtons = Array.from(document.querySelectorAll(".buttons input[type='submit']"));
-  const formAction = form.getAttribute("action") || window.location.href;
+  // start: Samme-origin HTTPS-kall via TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5)
+  const formAction = new URL(form.getAttribute("action") || "/cgi-bin/index.cgi", window.location.origin).toString();
+  // slutt: Samme-origin HTTPS-kall via TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5)
 
   const ACTIONS_WITH_ENCRYPTION = new Set(["Ny", "Endre"]);
   const ACTIONS_WITH_FETCH = new Set(["Ny", "Endre", "Slett", "Liste", "Min", "Admin"]);
@@ -373,3 +375,4 @@ if (form) {
   });
 }
 // slutt: Klientside-kryptering av kommentar før innsending - oppfyller F1 (privat kommentar) og NF7 (kryptering og nøkkelhåndtering i klient) (person 3)
+
