@@ -2,7 +2,7 @@
 
 set -eu
 
-# start: Oppretter kryptert bidrag-database fra secret-styrt nokkel i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nokkelhandtering) (person 4 og person 5)
+# start: Oppretter kryptert bidrag-database fra secret-styrt nøkkel i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nøkkelhandtering) (person 4 og person 5)
 DB_PATH="${1:-/data/bidrag.db}"
 KEY_FILE="${2:-${BIDRAG_DB_KEY_FILE:-/run/secrets/storage/bidrag-db-key}}"
 
@@ -66,4 +66,4 @@ mv "$TMP_DB" "$DB_PATH"
 trap - EXIT
 chown 10001:10001 "$DB_PATH"
 chmod 660 "$DB_PATH"
-# slutt: Oppretter kryptert bidrag-database fra secret-styrt nokkel i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nokkelhandtering) (person 4 og person 5)
+# slutt: Oppretter kryptert bidrag-database fra secret-styrt nøkkel i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nøkkelhandtering) (person 4 og person 5)

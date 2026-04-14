@@ -1,10 +1,10 @@
 #!/bin/sh
 
-# start: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjÃ¸ring) (person 4)
+# start: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
 DB="${BIDRAG_DB_PATH:-../bidrag.db}"
 PSEUDONYM_INTERNAL_URL="${PSEUDONYM_INTERNAL_URL:-http://127.0.0.1:8083/cgi-bin/index.cgi}"
 
-# start: SQLCipher-nokkel fra Kubernetes Secret i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nokkelhandtering) (person 4 og person 5)
+# start: SQLCipher-nøkkel fra Kubernetes Secret i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nokkelhandtering) (person 4 og person 5)
 KEY_FILE="${BIDRAG_DB_KEY_FILE:-/run/secrets/storage/bidrag-db-key}"
 
 les_hemmelighet() {
@@ -32,16 +32,22 @@ $1
 EOF
 }
 
+# start: Renser enkelverdier fra SQLCipher-oppslag i steg 9 - oppfyller F1 (stabil autentisering) og NF1 (integritet i autentiseringsflyt) (person 4 og person 5)
+db_scalar() {
+    db_query "$1" 2>/dev/null | awk 'NF && $0 != "ok" { print; exit }' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+# slutt: Renser enkelverdier fra SQLCipher-oppslag i steg 9 - oppfyller F1 (stabil autentisering) og NF1 (integritet i autentiseringsflyt) (person 4 og person 5)
+
 db_query_line() {
     sqlcipher -line "$DB" <<EOF
 PRAGMA key = '$SQLCIPHER_KEY_SQL';
 $1
 EOF
 }
-# slutt: SQLCipher-nokkel fra Kubernetes Secret i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nokkelhandtering) (person 4 og person 5)
-# slutt: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjÃ¸ring) (person 4)
+# slutt: SQLCipher-nokkel fra Kubernetes Secret i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nøkkelhandtering) (person 4 og person 5)
+# slutt: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
 
-# start: Person 2 â€“ innhold + visninger (F1, F2, NF1)
+# start: Person 2  innhold + visninger (F1, F2, NF1)
 url_param() {
     KEY="$1"
     echo "$QUERY_STRING" | tr '&' '\n' | awk -F= -v k="$KEY" '$1==k { print substr($0, index($0, "=")+1); exit }'
@@ -108,13 +114,13 @@ autentiser_bidragseier() {
     fi
 
     PN_SQL=$(sql_escape "$PN")
-    S=$(db_query "SELECT salt FROM Bidrag WHERE pseudonym='$PN_SQL';")
+    S=$(db_scalar "SELECT salt FROM Bidrag WHERE pseudonym='$PN_SQL';")
     if [ -z "$S" ]; then
         return 1
     fi
 
     H1=$(mkpasswd -m sha-256 -S "$S" "$PW" | cut -f4 -d'$')
-    H2=$(db_query "SELECT passordhash FROM Bidrag WHERE pseudonym='$PN_SQL';")
+    H2=$(db_scalar "SELECT passordhash FROM Bidrag WHERE pseudonym='$PN_SQL';")
 
     [ "$H1" = "$H2" ]
 }
@@ -122,7 +128,7 @@ autentiser_bidragseier() {
 # start: Skiller mellom manglende bidrag og autentiseringsfeil i Min-visning - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1 og person 2)
 har_bidrag() {
     PN_SQL=$(sql_escape "$1")
-    db_query "SELECT 1 FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1;"
+    db_scalar "SELECT 1 FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1;"
 }
 # slutt: Skiller mellom manglende bidrag og autentiseringsfeil i Min-visning - oppfyller F1 (identitet og flyt) og NF1 (integritet i tilbakemeldinger) (person 1 og person 2)
 
@@ -235,7 +241,7 @@ hent_bidragsfelt() {
             ;;
     esac
 
-    db_query "SELECT $SQL_FELT FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1;"
+    db_scalar "SELECT $SQL_FELT FROM Bidrag WHERE pseudonym='$PN_SQL' LIMIT 1;"
 }
 
 vis_min_visning() {
@@ -264,7 +270,7 @@ logg_innholdsoperasjon() {
 
     echo "bidrag-db $REQUEST_METHOD visning=${VISNING:-skriv} tittel=$HAR_TITTEL tekst=$HAR_TEKST kommentar=$HAR_KOMMENTAR" >&2
 }
-# slutt: Person 2 â€“ innhold + visninger (F1, F2, NF1)
+# slutt: Person 2  innhold + visninger (F1, F2, NF1)
 
 cat <<EOF
 Access-Control-Allow-Origin: https://localhost:8443

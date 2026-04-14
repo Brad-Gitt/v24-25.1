@@ -63,13 +63,13 @@ CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 
 KR=$(head -c "$CONTENT_LENGTH" )
 
-# ekstraherer epost fÃ¸r logging sÃ¥ vi kan maskere (endring)
+# ekstraherer epost får logging så vi kan maskere (endring)
 E_TMP=$( echo "$KR" | xmllint --xpath "string(/pseudonym/epost)" - 2>/dev/null )
 
-# masker epost for trygg logging (gdpr = unngÃ¥r lekkasje av persondata)
+# masker epost for trygg logging (gdpr = unngår lekkasje av persondata)
 MASKED_E=$(printf '%s' "$E_TMP" | sed 's/^\(.\).*\(@.*\)$/\1***\2/; t; s/.*/***/') # lagt til masking
 
-# logger uten Ã¥ vise hele body (gdpr = unngÃ¥r passord i logs)
+# logger uten å vise hele body (gdpr = unngår passord i logs)
 echo "pseudonym-db request mottatt for $MASKED_E" >&2 # endret logging
 
 # henter epost og passord fra XML
@@ -80,7 +80,7 @@ P=$( echo "$KR" | xmllint --xpath "string(/pseudonym/passord)" -  2> /dev/null )
 if [ -z "$E" ]; then svar_autentiseringsfeil "Epost mangler!"; fi
 if [ -z "$P" ]; then svar_autentiseringsfeil "Passord mangler!"; fi
 
-# enkel escaping for Ã¥ redusere SQL injection risiko (gdpr = beskytter data)
+# enkel escaping for å redusere SQL injection risiko (gdpr = beskytter data)
 E_SAFE=$(printf "%s" "$E" | sed "s/'/''/g") # lagt til
 
 # henter salt fra databasen

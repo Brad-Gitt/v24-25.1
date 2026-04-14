@@ -11,6 +11,7 @@ CREATE TABLE Bidrag (
 
 INSERT INTO Bidrag (pseudonym, salt, passordhash) VALUES
   ('osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA'),
-  ('uozaixav', '1712167671', 'q37QpOdM2jSDeXOVAyiCSzMgy08dI7pLQ1aBElJps48'),
-  ('olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA');
+  ('uozaixav', '1712167671', '5lQnfx89dpJpeaVR3CqCqy3pQPhdN8Nf0Nt9H9psgQ4'),
+  ('olaebaev', '1712167672', '9tkRE7Q8yBj.ydZTxSCR3ZW8vzHtNOoSpWSK/ZepxUA');
+  
 -- slutt: Kryptert init-data for bidrag-databasen i steg 9 - oppfyller F3 (persistens) og NF7 (kryptering av data at rest) (person 4 og person 5)
