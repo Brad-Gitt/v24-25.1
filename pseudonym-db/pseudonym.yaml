@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pseudonym-db
+  labels:
+    app: pseudonym-db
+    component: pseudonym-db
+    tier: backend
+    security: hardened
+spec:
+  selector:
+    app: pseudonym-db
+  ports:
+    - name: http
+      port: 83
+      targetPort: 8083
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pseudonym-db
+  labels:
+    app: pseudonym-db
+    component: pseudonym-db
+    tier: backend
+    security: hardened
+spec:
+  serviceAccountName: allpodd-sa
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+    fsGroup: 10001
+  terminationGracePeriodSeconds: 10
+  initContainers:
+    - name: seed-pseudonym-db
+      image: localhost/pseudonym-db:latest
+      imagePullPolicy: Never
+      command:
+        - /var/www/init-encrypted-db.sh
+        - /data/pseudonym.db
+        - /run/secrets/storage/pseudonym-db-key
+      volumeMounts:
+        - name: pseudonym-db-data
+          mountPath: /data
+        - name: storage-key-material
+          mountPath: /run/secrets/storage
+          readOnly: true
+  containers:
+    - name: pseudonym-db
+      image: localhost/pseudonym-db:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 8083
+          name: pseudonym-db
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+      env:
+        - name: PSEUDONYM_DB_PATH
+          value: /data/pseudonym.db
+        - name: PSEUDONYM_DB_KEY_FILE
+          value: /run/secrets/storage/pseudonym-db-key
+      resources:
+        requests:
+          cpu: "25m"
+          memory: "64Mi"
+        limits:
+          cpu: "150m"
+          memory: "128Mi"
+      readinessProbe:
+        exec:
+          command: ["sh", "-c", "nc -z 127.0.0.1 8083"]
+        periodSeconds: 10
+        timeoutSeconds: 3
+      livenessProbe:
+        exec:
+          command: ["sh", "-c", "nc -z 127.0.0.1 8083"]
+        initialDelaySeconds: 15
+        periodSeconds: 20
+        timeoutSeconds: 3
+      startupProbe:
+        exec:
+          command: ["sh", "-c", "nc -z 127.0.0.1 8083"]
+        periodSeconds: 5
+        failureThreshold: 12
+      volumeMounts:
+        - name: pseudonym-db-data
+          mountPath: /data
+        - name: storage-key-material
+          mountPath: /run/secrets/storage
+          readOnly: true
+        - name: pseudonym-tmp
+          mountPath: /tmp
+  volumes:
+    - name: pseudonym-db-data
+      persistentVolumeClaim:
+        claimName: pseudonym-pvc
+    - name: storage-key-material
+      secret:
+        secretName: allpodd-storage-secrets
+    - name: pseudonym-tmp
+      emptyDir: {}
