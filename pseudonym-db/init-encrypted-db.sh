@@ -12,12 +12,43 @@ sql_escape() {
 
 mkdir -p "$(dirname "$DB_PATH")"
 
+if [ ! -s "$KEY_FILE" ]; then
+  echo "Manglende krypteringsnokkel for pseudonym-db." >&2
+  exit 1
+fi
+
+KEY=$(tr -d '\r\n' < "$KEY_FILE")
+KEY_SQL=$(sql_escape "$KEY")
+TMP_DB="${DB_PATH}.tmp"
+PLAIN_DB="${DB_PATH}.plain"
+
+# start: Synkroniserer demo-brukere og kjente passord ved oppstart i steg 9 - oppfyller F1 (identitet og flyt), F3 (persistens) og NF7 (kryptert lagring) (person 4 og person 5)
+synkroniser_demo_brukere() {
+  TARGET_DB="$1"
+
+  sqlcipher "$TARGET_DB" <<EOF
+PRAGMA key = '$KEY_SQL';
+INSERT INTO Pseudonym (epost, pseudonym, salt, passordhash) VALUES
+  ('Ante@example.com', 'osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA'),
+  ('Bjart@example.com', 'uozaixav', '1712167671', '5lQnfx89dpJpeaVR3CqCqy3pQPhdN8Nf0Nt9H9psgQ4'),
+  ('Cecilie@example.com', 'olaebaev', '1712167672', '9tkRE7Q8yBj.ydZTxSCR3ZW8vzHtNOoSpWSK/ZepxUA'),
+  ('mikke@gmail.com', 'admin', '12345678901', '3pxeb/.Vk9IUi/DI91E1PlBuFwIPNgoLbtVnG2sZIX7'),
+  ('test_admin@usn.com', 'admin', '12345678902', 'pe.Rb1e7dwA7KccxIidKRw4gPoXp3qTxS83S4ITDVC7')
+ON CONFLICT(epost) DO UPDATE SET
+  pseudonym = excluded.pseudonym,
+  salt = excluded.salt,
+  passordhash = excluded.passordhash;
+EOF
+}
+# slutt: Synkroniserer demo-brukere og kjente passord ved oppstart i steg 9 - oppfyller F1 (identitet og flyt), F3 (persistens) og NF7 (kryptert lagring) (person 4 og person 5)
+
 if [ -f "$DB_PATH" ]; then
   if sqlcipher "$DB_PATH" <<EOF >/dev/null 2>&1
 PRAGMA key = '$KEY_SQL';
 SELECT count(*) FROM sqlite_master;
 EOF
   then
+    synkroniser_demo_brukere "$DB_PATH"
     chown 10001:10001 "$DB_PATH"
     chmod 660 "$DB_PATH"
     exit 0
@@ -28,16 +59,6 @@ EOF
     exit 1
   fi
 fi
-
-if [ ! -s "$KEY_FILE" ]; then
-  echo "Manglende krypteringsnokkel for pseudonym-db." >&2
-  exit 1
-fi
-
-KEY=$(tr -d '\r\n' < "$KEY_FILE")
-KEY_SQL=$(sql_escape "$KEY")
-TMP_DB="${DB_PATH}.tmp"
-PLAIN_DB="${DB_PATH}.plain"
 
 cleanup() {
   rm -f "$TMP_DB"
@@ -61,6 +82,8 @@ PRAGMA key = '$KEY_SQL';
 .read /var/www/init.sql
 EOF
 fi
+
+synkroniser_demo_brukere "$TMP_DB"
 
 mv "$TMP_DB" "$DB_PATH"
 trap - EXIT

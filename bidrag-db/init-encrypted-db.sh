@@ -12,6 +12,16 @@ sql_escape() {
 
 mkdir -p "$(dirname "$DB_PATH")"
 
+if [ ! -s "$KEY_FILE" ]; then
+  echo "Manglende krypteringsnokkel for bidrag-db." >&2
+  exit 1
+fi
+
+KEY=$(tr -d '\r\n' < "$KEY_FILE")
+KEY_SQL=$(sql_escape "$KEY")
+TMP_DB="${DB_PATH}.tmp"
+PLAIN_DB="${DB_PATH}.plain"
+
 if [ -f "$DB_PATH" ]; then
   if sqlcipher "$DB_PATH" <<EOF >/dev/null 2>&1
 PRAGMA key = '$KEY_SQL';
@@ -28,16 +38,6 @@ EOF
     exit 1
   fi
 fi
-
-if [ ! -s "$KEY_FILE" ]; then
-  echo "Manglende krypteringsnokkel for bidrag-db." >&2
-  exit 1
-fi
-
-KEY=$(tr -d '\r\n' < "$KEY_FILE")
-KEY_SQL=$(sql_escape "$KEY")
-TMP_DB="${DB_PATH}.tmp"
-PLAIN_DB="${DB_PATH}.plain"
 
 cleanup() {
   rm -f "$TMP_DB"

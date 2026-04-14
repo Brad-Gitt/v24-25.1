@@ -8,9 +8,9 @@
     <script src="crypto.js" defer></script>
   </head>
   <body>
-    <!-- start: Samme-origin endepunkt via TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5) -->
-    <form action="/cgi-bin/index.cgi" method="post" id="bidrag-form">
-    <!-- slutt: Samme-origin endepunkt via TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5) -->
+    <!-- start: HTTPS-endepunkt med trygg fallback til TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5) -->
+    <form action="https://localhost:8443/cgi-bin/index.cgi" method="post" id="bidrag-form">
+    <!-- slutt: HTTPS-endepunkt med trygg fallback til TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5) -->
       <div class="logo-wrap">
         <img src="skytjenester-logo.png" alt="Allpodd-logo" class="site-logo">
       </div>

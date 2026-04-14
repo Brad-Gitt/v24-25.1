@@ -10,9 +10,22 @@ if (form) {
   const metadataField = document.querySelector("#offentlig_nokkel");
   const responseField = document.querySelector("#respons-felt");
   const submitButtons = Array.from(document.querySelectorAll(".buttons input[type='submit']"));
-  // start: Samme-origin HTTPS-kall via TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5)
-  const formAction = new URL(form.getAttribute("action") || "/cgi-bin/index.cgi", window.location.origin).toString();
-  // slutt: Samme-origin HTTPS-kall via TLS-gateway i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5)
+  // start: HTTPS-kall med fallback til TLS-gateway nar frontend er apnet pa gammel port i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5)
+  function resolveGatewayOrigin() {
+    if (window.location.protocol === "https:" && window.location.port === "8443") {
+      return window.location.origin;
+    }
+
+    if (window.location.hostname === "127.0.0.1") {
+      return "https://127.0.0.1:8443";
+    }
+
+    return "https://localhost:8443";
+  }
+
+  const formAction = new URL(form.getAttribute("action") || "/cgi-bin/index.cgi", resolveGatewayOrigin()).toString();
+  form.setAttribute("action", formAction);
+  // slutt: HTTPS-kall med fallback til TLS-gateway nar frontend er apnet pa gammel port i steg 9 - oppfyller NF7 (TLS/HTTPS) og F1 (sikker brukerflyt) (person 4 og person 5)
 
   const ACTIONS_WITH_ENCRYPTION = new Set(["Ny", "Endre"]);
   const ACTIONS_WITH_FETCH = new Set(["Ny", "Endre", "Slett", "Liste", "Min", "Admin"]);

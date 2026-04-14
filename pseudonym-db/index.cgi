@@ -1,4 +1,4 @@
-﻿#!/bin/sh
+#!/bin/sh
 
 # start: Konfigurerbar databasebane for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjÃ¸ring) (person 4)
 DB="${PSEUDONYM_DB_PATH:-../pseudonym.db}"
@@ -30,6 +30,12 @@ PRAGMA key = '$SQLCIPHER_KEY_SQL';
 $1
 EOF
 }
+
+# start: Renser enkelverdier fra SQLCipher-oppslag i steg 9 - oppfyller F1 (stabil autentisering) og NF1 (integritet i autentiseringsflyt) (person 4 og person 5)
+db_scalar() {
+    db_query "$1" 2>/dev/null | awk 'NF && $0 != "ok" { print; exit }' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+# slutt: Renser enkelverdier fra SQLCipher-oppslag i steg 9 - oppfyller F1 (stabil autentisering) og NF1 (integritet i autentiseringsflyt) (person 4 og person 5)
 # slutt: SQLCipher-nokkel fra Kubernetes Secret i steg 9 - oppfyller F3 (persistens), NF1 (ingen hardkodede hemmeligheter) og NF7 (kryptering av data at rest og nokkelhandtering) (person 4 og person 5)
 # slutt: Konfigurerbar databasebane for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjÃ¸ring) (person 4)
 
@@ -78,7 +84,7 @@ if [ -z "$P" ]; then svar_autentiseringsfeil "Passord mangler!"; fi
 E_SAFE=$(printf "%s" "$E" | sed "s/'/''/g") # lagt til
 
 # henter salt fra databasen
-S=$( db_query "SELECT salt FROM Pseudonym WHERE epost='$E_SAFE';" ) # endret til SAFE
+S=$( db_scalar "SELECT salt FROM Pseudonym WHERE epost='$E_SAFE';" ) # endret til SAFE
 
 # stopper hvis bruker ikke finnes
 if [ -z "$S" ]; then svar_autentiseringsfeil "Bruker finnes ikke!"; fi
@@ -87,11 +93,11 @@ if [ -z "$S" ]; then svar_autentiseringsfeil "Bruker finnes ikke!"; fi
 H1=$( mkpasswd -m sha-256 -S "$S" "$P" | cut -f4 -d'$' )
 
 # henter lagret hash
-H2=$( db_query "SELECT passordhash FROM Pseudonym WHERE epost='$E_SAFE';" ) # bruker SAFE
+H2=$( db_scalar "SELECT passordhash FROM Pseudonym WHERE epost='$E_SAFE';" ) # bruker SAFE
 
 # sammenligner hash og henter pseudonym
 if [ "$H1" != "$H2" ]; then svar_autentiseringsfeil "Feil passord!"; fi
-PN=$(db_query "SELECT pseudonym FROM Pseudonym WHERE epost='$E_SAFE';") # bruker DB variabel konsekvent
+PN=$(db_scalar "SELECT pseudonym FROM Pseudonym WHERE epost='$E_SAFE';") # bruker DB variabel konsekvent
 
 # logger mindre sensitiv info (gdpr = begrenser eksponering)
 echo "pseudonym funnet for $MASKED_E" >&2 # endret

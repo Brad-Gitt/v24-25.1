@@ -1,5 +1,12 @@
 # Cloud Deploy-Plan og Ansvar (NF4)
 
+<!-- start: Operativ status etter steg 8 - oppfyller NF4 og støtter NF1/NF2 i drift (person 4) -->
+## Operativ status etter steg 8
+- Kubernetes-manifestene i repoet er nå kuraterte og herdede, og brukes direkte av `podman_til_k8s.sh`.
+- Persistens, servicekonto uten API-token, RBAC uten privilegier, health probes, requests/limits og network policy er lagt inn i manifestene.
+- Dette gjør at cloud-deploy-planen ikke lenger bare er teoretisk; grunnoppsettet er nå nærmere det som faktisk bør flyttes til en sky-klynge.
+<!-- slutt: Operativ status etter steg 8 - oppfyller NF4 og støtter NF1/NF2 i drift (person 4) -->
+
 ## Oversikt
 Dette dokumentet beskriver planen for cloud-deployment av Allpodd-systemet, inkludert shared responsibility-modellen og roller som controller/processor i henhold til GDPR.
 

@@ -1,13 +1,24 @@
-﻿#!/bin/sh
+#!/bin/sh
 
 # litt oppgradert CGI-script med bedre sikkerhet og logging (gdpr = mindre lekkasje av persondata)
 
-# start: CORS-stÃ¸tte for steg 7-klientflyt - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
-echo "Access-Control-Allow-Origin: https://localhost:8443"
+# start: CORS-stotte for localhost-flyt via bade gammel port og TLS-gateway - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
+tillat_origin() {
+  case "$HTTP_ORIGIN" in
+    "https://localhost:8443"|"https://127.0.0.1:8443"|"http://localhost:8080"|"http://127.0.0.1:8080")
+      printf '%s' "$HTTP_ORIGIN"
+      ;;
+    *)
+      printf '%s' "https://localhost:8443"
+      ;;
+  esac
+}
+
+echo "Access-Control-Allow-Origin: $(tillat_origin)"
 echo "Access-Control-Allow-Credentials: true"
 echo "Access-Control-Allow-Methods: GET,POST,OPTIONS"
 echo "Access-Control-Allow-Headers: Content-Type"
-# slutt: CORS-stÃ¸tte for steg 7-klientflyt - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
+# slutt: CORS-stotte for localhost-flyt via bade gammel port og TLS-gateway - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
 
 # sender riktig header tilbake sÃ¥ nettleser skjÃ¸nner responsen
 echo "Content-Type: text/plain; charset=utf-8"

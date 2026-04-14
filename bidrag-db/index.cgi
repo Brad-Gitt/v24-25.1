@@ -1,4 +1,4 @@
-﻿#!/bin/sh
+#!/bin/sh
 
 # start: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjÃ¸ring) (person 4)
 DB="${BIDRAG_DB_PATH:-../bidrag.db}"

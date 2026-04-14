@@ -49,7 +49,7 @@ spec:
   # start: Init-containere som seed-er persistente databaser før oppstart - oppfyller F3 (persistens) og deler av NF7 (recovery) (person 4)
   initContainers:
     - name: seed-bidrag-db
-      image: localhost/bidrag-db:latest
+      image: localhost/bidrag-db:bomfix1
       imagePullPolicy: Never
       command:
         - /var/www/init-encrypted-db.sh
@@ -62,7 +62,7 @@ spec:
           mountPath: /run/secrets/storage
           readOnly: true
     - name: seed-pseudonym-db
-      image: localhost/pseudonym-db:latest
+      image: localhost/pseudonym-db:bomfix1
       imagePullPolicy: Never
       command:
         - /var/www/init-encrypted-db.sh
@@ -123,7 +123,7 @@ spec:
           mountPath: /tmp
       # slutt: TLS-gateway med cert-secret og samme-origin proxy i steg 9 - oppfyller NF7 (TLS/HTTPS og nøkkelhåndtering) og NF1 (forsvar i dybden) (person 4 og person 5)
     - name: app
-      image: localhost/app:latest
+      image: localhost/app:bomfix1
       imagePullPolicy: Never
       ports:
         - containerPort: 8081
@@ -166,7 +166,7 @@ spec:
           mountPath: /tmp
       # slutt: Container-hardening for app-tjenesten - oppfyller NF1 (minste privilegium og defense in depth) (person 4)
     - name: bidrag-db
-      image: localhost/bidrag-db:latest
+      image: localhost/bidrag-db:bomfix1
       imagePullPolicy: Never
       ports:
         - containerPort: 8082
@@ -221,7 +221,7 @@ spec:
           mountPath: /tmp
       # slutt: Container-hardening for bidrag-databasen - oppfyller NF1 (minste privilegium og defense in depth), F3 (persistens) og deler av NF7 (recovery) (person 4)
     - name: pseudonym-db
-      image: localhost/pseudonym-db:latest
+      image: localhost/pseudonym-db:bomfix1
       imagePullPolicy: Never
       ports:
         - containerPort: 8083
