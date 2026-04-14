@@ -128,8 +128,8 @@ if [ -z "$H" ]; then
 fi
 
 # start: Loopback-ruting til herdede sidevogner pÃ¥ hÃ¸ye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjÃ¸ring i Kubernetes) (person 4)
-URL_B_INTERNAL="http://127.0.0.1:8082/cgi-bin/index.cgi"
-URL_PN_INTERNAL="http://127.0.0.1:8083/cgi-bin/index.cgi"
+URL_B_INTERNAL="http://bidrag-db:82/cgi-bin/index.cgi"
+URL_PN_INTERNAL="http://pseudonym-db:83/cgi-bin/index.cgi"
 # slutt: Loopback-ruting til herdede sidevogner pÃ¥ hÃ¸ye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjÃ¸ring i Kubernetes) (person 4)
 
 # offentlig liste skal ikke kreve epost eller passord
