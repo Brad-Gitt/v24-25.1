@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webrom
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: approm
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bidragsrom
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pseudonymrom

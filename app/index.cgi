@@ -117,8 +117,8 @@ if [ -z "$H" ]; then
 fi
 
 # start: Intern ruting mellom separate pods via Kubernetes-service-navn - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
-URL_B_INTERNAL="http://bidrag-db:8082/cgi-bin/index.cgi"
-URL_PN_INTERNAL="http://pseudonym-db:8083/cgi-bin/index.cgi"
+URL_B_INTERNAL="${URL_B_INTERNAL:-http://bidrag-db.bidragsrom.svc.cluster.local:8082/cgi-bin/index.cgi}"
+URL_PN_INTERNAL="${URL_PN_INTERNAL:-http://pseudonym-db.pseudonymrom.svc.cluster.local:8083/cgi-bin/index.cgi}"
 # slutt: Intern ruting mellom separate pods via Kubernetes-service-navn - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
 
 # offentlig liste skal ikke kreve epost eller passord

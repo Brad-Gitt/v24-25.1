@@ -1,0 +1,309 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: webrom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: allpodd
+      component: web
+  template:
+    metadata:
+      labels:
+        app: allpodd
+        component: web
+        tier: edge
+        security: hardened
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 10001
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: web
+          image: localhost/web:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: web
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "48Mi"
+            limits:
+              cpu: "100m"
+              memory: "96Mi"
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "nc -z 127.0.0.1 8080"]
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "nc -z 127.0.0.1 8080"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "nc -z 127.0.0.1 8080"]
+            periodSeconds: 5
+            failureThreshold: 12
+          volumeMounts:
+            - name: web-tmp
+              mountPath: /tmp
+      volumes:
+        - name: web-tmp
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: approm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: allpodd
+      component: app
+  template:
+    metadata:
+      labels:
+        app: allpodd
+        component: app
+        tier: application
+        security: hardened
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 10001
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: app
+          image: localhost/app:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8081
+              name: app
+          env:
+            - name: URL_B_INTERNAL
+              value: http://bidrag-db.bidragsrom.svc.cluster.local:8082/cgi-bin/index.cgi
+            - name: URL_PN_INTERNAL
+              value: http://pseudonym-db.pseudonymrom.svc.cluster.local:8083/cgi-bin/index.cgi
+            - name: APP_ALLOWED_ORIGIN
+              value: http://localhost:8080
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "nc -z 127.0.0.1 8081"]
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "nc -z 127.0.0.1 8081"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "nc -z 127.0.0.1 8081"]
+            periodSeconds: 5
+            failureThreshold: 12
+          volumeMounts:
+            - name: app-tmp
+              mountPath: /tmp
+      volumes:
+        - name: app-tmp
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bidrag-db
+  namespace: bidragsrom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: allpodd
+      component: bidrag-db
+  template:
+    metadata:
+      labels:
+        app: allpodd
+        component: bidrag-db
+        tier: backend
+        security: hardened
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 10001
+      terminationGracePeriodSeconds: 10
+      initContainers:
+        - name: seed-bidrag-db
+          image: localhost/bidrag-db:latest
+          imagePullPolicy: Never
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /data/bidrag.db ]; then
+                cp /var/www/bidrag.db /data/bidrag.db
+              fi
+              chown 10001:10001 /data/bidrag.db
+              chmod 660 /data/bidrag.db
+          volumeMounts:
+            - name: bidrag-db-data
+              mountPath: /data
+      containers:
+        - name: bidrag-db
+          image: localhost/bidrag-db:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8082
+              name: bidrag-db
+          env:
+            - name: BIDRAG_DB_PATH
+              value: /data/bidrag.db
+            - name: PSEUDONYM_INTERNAL_URL
+              value: http://pseudonym-db.pseudonymrom.svc.cluster.local:8083/cgi-bin/index.cgi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "96Mi"
+            limits:
+              cpu: "250m"
+              memory: "192Mi"
+          volumeMounts:
+            - name: bidrag-db-data
+              mountPath: /data
+            - name: bidrag-tmp
+              mountPath: /tmp
+      volumes:
+        - name: bidrag-db-data
+          persistentVolumeClaim:
+            claimName: bidrag-pvc
+        - name: bidrag-tmp
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pseudonym-db
+  namespace: pseudonymrom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: allpodd
+      component: pseudonym-db
+  template:
+    metadata:
+      labels:
+        app: allpodd
+        component: pseudonym-db
+        tier: backend
+        security: hardened
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 10001
+      terminationGracePeriodSeconds: 10
+      initContainers:
+        - name: seed-pseudonym-db
+          image: localhost/pseudonym-db:latest
+          imagePullPolicy: Never
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /data/pseudonym.db ]; then
+                cp /var/www/pseudonym.db /data/pseudonym.db
+              fi
+              chown 10001:10001 /data/pseudonym.db
+              chmod 660 /data/pseudonym.db
+          volumeMounts:
+            - name: pseudonym-db-data
+              mountPath: /data
+      containers:
+        - name: pseudonym-db
+          image: localhost/pseudonym-db:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8083
+              name: pseudonym-db
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              cpu: "150m"
+              memory: "128Mi"
+          volumeMounts:
+            - name: pseudonym-db-data
+              mountPath: /data
+            - name: pseudonym-tmp
+              mountPath: /tmp
+      volumes:
+        - name: pseudonym-db-data
+          persistentVolumeClaim:
+            claimName: pseudonym-pvc
+        - name: pseudonym-tmp
+          emptyDir: {}
