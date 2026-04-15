@@ -2,7 +2,7 @@
 
 # start: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
 DB="${BIDRAG_DB_PATH:-../bidrag.db}"
-PSEUDONYM_INTERNAL_URL="${PSEUDONYM_INTERNAL_URL:-http://127.0.0.1:8083/cgi-bin/index.cgi}"
+PSEUDONYM_INTERNAL_URL="${PSEUDONYM_INTERNAL_URL:-http://pseudonym-db:8083/cgi-bin/index.cgi}"
 # slutt: Konfigurerbar databasebane og intern admin-url for herdet Kubernetes-drift - oppfyller F3 (persistens), NF1 (minste privilegium) og NF3 (stabil lokal kjøring) (person 4)
 
 # start: Person 2 – innhold + visninger (F1, F2, NF1)

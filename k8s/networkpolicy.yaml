@@ -1,4 +1,4 @@
-# start: NetworkPolicy som begrenser ytre angrepsflate til web og app - oppfyller NF1 (defense in depth og zero trust) og NF2 (Kubernetes) (person 4)
+# start: NetworkPolicy som isolerer fire pods og bare slipper gjennom forventet trafikk - oppfyller NF1 (defense in depth og zero trust) og NF2 (Kubernetes) (person 4)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -23,7 +23,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allpodd-allow-web-and-app
+  name: allpodd-allow-dns-egress
   labels:
     # start: Identifikasjonsetiketter for nettverkspolicy - oppfyller NF6 (merking av skyverdier) (person 4)
     app: allpodd
@@ -36,13 +36,191 @@ spec:
     matchLabels:
       app: allpodd
   policyTypes:
-    - Ingress
     - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allpodd-allow-external-to-web
+  labels:
+    app: allpodd
+    component: network-policy
+    tier: control
+    security: hardened
+spec:
+  podSelector:
+    matchLabels:
+      app: allpodd
+      component: web
+  policyTypes:
+    - Ingress
   ingress:
     - ports:
         - protocol: TCP
           port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allpodd-allow-external-to-app
+  labels:
+    app: allpodd
+    component: network-policy
+    tier: control
+    security: hardened
+spec:
+  podSelector:
+    matchLabels:
+      app: allpodd
+      component: app
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
         - protocol: TCP
           port: 8081
-  egress: []
-# slutt: NetworkPolicy som begrenser ytre angrepsflate til web og app - oppfyller NF1 (defense in depth og zero trust) og NF2 (Kubernetes) (person 4)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allpodd-allow-app-to-bidrag-db
+  labels:
+    app: allpodd
+    component: network-policy
+    tier: control
+    security: hardened
+spec:
+  podSelector:
+    matchLabels:
+      app: allpodd
+      component: bidrag-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: allpodd
+              component: app
+      ports:
+        - protocol: TCP
+          port: 8082
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allpodd-allow-app-and-bidrag-to-pseudonym-db
+  labels:
+    app: allpodd
+    component: network-policy
+    tier: control
+    security: hardened
+spec:
+  podSelector:
+    matchLabels:
+      app: allpodd
+      component: pseudonym-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: allpodd
+              component: app
+        - podSelector:
+            matchLabels:
+              app: allpodd
+              component: bidrag-db
+      ports:
+        - protocol: TCP
+          port: 8083
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allpodd-allow-app-egress
+  labels:
+    app: allpodd
+    component: network-policy
+    tier: control
+    security: hardened
+spec:
+  podSelector:
+    matchLabels:
+      app: allpodd
+      component: app
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: allpodd
+              component: bidrag-db
+      ports:
+        - protocol: TCP
+          port: 8082
+    - to:
+        - podSelector:
+            matchLabels:
+              app: allpodd
+              component: pseudonym-db
+      ports:
+        - protocol: TCP
+          port: 8083
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allpodd-allow-bidrag-db-egress
+  labels:
+    app: allpodd
+    component: network-policy
+    tier: control
+    security: hardened
+spec:
+  podSelector:
+    matchLabels:
+      app: allpodd
+      component: bidrag-db
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: allpodd
+              component: pseudonym-db
+      ports:
+        - protocol: TCP
+          port: 8083
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+# slutt: NetworkPolicy som isolerer fire pods og bare slipper gjennom forventet trafikk - oppfyller NF1 (defense in depth og zero trust) og NF2 (Kubernetes) (person 4)

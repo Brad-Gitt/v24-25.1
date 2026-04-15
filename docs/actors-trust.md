@@ -13,7 +13,7 @@
 
 ## Tillitsgrenser
 - **Bruker ↔ Web/App**: HTTPS/TLS for kryptering i transit.
-- **App ↔ DB-er**: Intern kommunikasjon i Pod, ingen ekstern tilgang.
+- **App ↔ DB-er**: Intern kommunikasjon går mellom separate Kubernetes-pods via egne tjenester, avgrenset med NetworkPolicy.
 - **DB-er**: SQLite med fil-tilgang, begrenset til container.
 - **Admin-tilgang**: Krever autentisering, separate grensesnitt.
 

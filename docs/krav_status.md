@@ -21,7 +21,7 @@ Denne vurderingen er basert på den faktiske kodebasen i WSL-repoet slik den ser
 
 | Krav | Status | Vurdering | Grunnlag |
 | --- | --- | --- | --- |
-| IFK-01 | Delvis | Least privilege og defense in depth er godt dekket i Kubernetes-oppsettet. Zero trust og GDPR-prinsippene er bare delvis dekket: intern kommunikasjon i samme pod stoler fortsatt mye på loopback, og lagringsbegrensning er ikke implementert som reell mekanisme. | allpodd.yaml, k8s/rbac.yaml, k8s/networkpolicy.yaml, app/index.cgi, docs/infra.md |
+| IFK-01 | Delvis | Least privilege og defense in depth er godt dekket i Kubernetes-oppsettet. Zero trust er forbedret ved at web, app og databasene nå kjører i egne pods og snakker via tjenester og NetworkPolicy. GDPR-prinsippene er fortsatt bare delvis dekket fordi lagringsbegrensning ikke er implementert som reell mekanisme, og kommunikasjonen mangler sterk gjensidig autentisering/TLS. | allpodd.yaml, k8s/rbac.yaml, k8s/networkpolicy.yaml, app/index.cgi, docs/infra.md |
 | IFK-02 | Fullført | Løsningen er orkestrert med Kubernetes-manifester for service, pod, PVC, RBAC og network policy. | allpodd.yaml, k8s/*.yaml |
 | IFK-03 | Fullført | Lokal utvikling med MicroK8s og Podman er tydelig støttet gjennom bygg og deploy-script og verify-script. | podman_til_k8s.sh, scripts/verify.sh |
 | IFK-04 | Fullført | Det finnes cloud deploy-plan og beskrivelse av ansvar mellom aktører. Dette er dokumentasjonskravet, ikke full skyimplementasjon. | docs/cloud-deploy.md, docs/deploy-plan.md |
@@ -34,7 +34,7 @@ Denne vurderingen er basert på den faktiske kodebasen i WSL-repoet slik den ser
 ### IFK-01
 - IFK-01.1 minste privilegium: stort sett fullført med runAsNonRoot, readOnlyRootFilesystem, droppede capabilities og servicekonto uten API-token.
 - IFK-01.2 forsvar i dybden: stort sett fullført med flere lag i frontend, app, databaser og Kubernetes.
-- IFK-01.3 zero trust: delvis. Appen autentiserer brukere og admin, men interne komponenter i samme pod er fortsatt tett koblet og har ikke sterk gjensidig verifikasjon.
+- IFK-01.3 zero trust: delvis. Komponentene er nå skilt i egne pods med eksplisitte nettverksregler, men de mangler fortsatt sterk gjensidig verifikasjon og TLS mellom tjenestene.
 - IFK-01.4 dataminimering: delvis til godt dekket. Offentlig visning lekker ikke e-post, og logger maskerer e-post. Samtidig lagres fortsatt nødvendige persondata lokalt uten egen retention-mekanisme.
 - IFK-01.5 langtidsbegrensning: ikke reelt implementert. Det finnes ingen automatisk sletting, TTL eller dokumentert retention-policy i kode eller manifester.
 - IFK-01.6 integritet og konfidensialitet: delvis. Hashing, klientkryptering og tilgangskontroll finnes, men dagens branch mangler TLS og databasekryptering at rest.

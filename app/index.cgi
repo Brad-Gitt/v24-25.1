@@ -3,7 +3,9 @@
 # litt oppgradert CGI-script med bedre sikkerhet og logging (gdpr = mindre lekkasje av persondata)
 
 # start: CORS-støtte for steg 7-klientflyt - oppfyller F1 (egen visning av privat kommentar) og NF1 (sikker og kontrollert frontend-flyt) (person 5)
-echo "Access-Control-Allow-Origin: http://localhost:8080"
+APP_ALLOWED_ORIGIN="${APP_ALLOWED_ORIGIN:-http://localhost:8080}"
+
+echo "Access-Control-Allow-Origin: $APP_ALLOWED_ORIGIN"
 echo "Access-Control-Allow-Credentials: true"
 echo "Access-Control-Allow-Methods: GET,POST,OPTIONS"
 echo "Access-Control-Allow-Headers: Content-Type"
@@ -116,10 +118,10 @@ if [ -z "$H" ]; then
   exit 0
 fi
 
-# start: Loopback-ruting til herdede sidevogner på høye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
-URL_B_INTERNAL="http://127.0.0.1:8082/cgi-bin/index.cgi"
-URL_PN_INTERNAL="http://127.0.0.1:8083/cgi-bin/index.cgi"
-# slutt: Loopback-ruting til herdede sidevogner på høye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
+# start: Konfigurerbar tjenesteruting til egne pods - oppfyller NF1 (minste privilegium og tydeligere trust boundaries) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
+URL_B_INTERNAL="${URL_B_INTERNAL:-http://bidrag-db:8082/cgi-bin/index.cgi}"
+URL_PN_INTERNAL="${URL_PN_INTERNAL:-http://pseudonym-db:8083/cgi-bin/index.cgi}"
+# slutt: Konfigurerbar tjenesteruting til egne pods - oppfyller NF1 (minste privilegium og tydeligere trust boundaries) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
 
 # offentlig liste skal ikke kreve epost eller passord
 if [ "$H" = "Liste" ]; then

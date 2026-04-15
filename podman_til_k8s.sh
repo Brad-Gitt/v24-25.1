@@ -21,14 +21,20 @@ microk8s kubectl apply -f k8s/networkpolicy.yaml
 
 microk8s kubectl delete service/allpodd --ignore-not-found
 microk8s kubectl delete pod/allpodd --ignore-not-found
+microk8s kubectl delete service/web service/app service/bidrag-db service/pseudonym-db --ignore-not-found
+microk8s kubectl delete pod/web pod/app pod/bidrag-db pod/pseudonym-db --ignore-not-found
 
 microk8s kubectl apply -f allpodd.yaml
-microk8s kubectl wait --for=condition=Ready pod/allpodd --timeout=180s
+microk8s kubectl wait --for=condition=Ready pod/web --timeout=180s
+microk8s kubectl wait --for=condition=Ready pod/app --timeout=180s
+microk8s kubectl wait --for=condition=Ready pod/bidrag-db --timeout=180s
+microk8s kubectl wait --for=condition=Ready pod/pseudonym-db --timeout=180s
 # slutt: Bruker kuraterte manifestfiler i stedet for podman generate kube - oppfyller NF1 (kontrollert konfigurasjon), NF2 (Kubernetes) og deler av NF7 (recovery) (person 4)
 
 echo
 echo "Gjør web (80) og app (81) tilgjengelig på localhost:"
 echo
-echo "microk8s kubectl port-forward service/allpodd 8080:80 8081:81"
+echo "microk8s kubectl port-forward service/web 8080:80"
+echo "microk8s kubectl port-forward service/app 8081:81"
 echo
 echo "For å se i nettleser, gå til http://localhost:8080"
