@@ -116,16 +116,16 @@ if [ -z "$H" ]; then
   exit 0
 fi
 
-# start: Loopback-ruting til herdede sidevogner på høye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
-URL_B_INTERNAL="http://127.0.0.1:8082/cgi-bin/index.cgi"
-URL_PN_INTERNAL="http://127.0.0.1:8083/cgi-bin/index.cgi"
-# slutt: Loopback-ruting til herdede sidevogner på høye porter - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
+# start: Intern ruting mellom separate pods via Kubernetes-service-navn - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
+URL_B_INTERNAL="http://bidrag-db:8082/cgi-bin/index.cgi"
+URL_PN_INTERNAL="http://pseudonym-db:8083/cgi-bin/index.cgi"
+# slutt: Intern ruting mellom separate pods via Kubernetes-service-navn - oppfyller NF1 (minste privilegium og redusert nettverksoverflate) og NF3 (stabil lokal kjøring i Kubernetes) (person 4)
 
 # offentlig liste skal ikke kreve epost eller passord
 if [ "$H" = "Liste" ]; then
   URL_B="$URL_B_INTERNAL"
   echo "BIDRAG kall til: $URL_B - handling=$H" >&2
-  SVAR=$(curl -s "$URL_B")
+  SVAR=$(curl -fsS "$URL_B" || true)
   skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag å vise."
   exit 0
 fi
@@ -166,7 +166,10 @@ URL_PN="$URL_PN_INTERNAL"
 echo "PN kall til: $URL_PN (masked=$MASKED_EMAIL)" >&2
 
 # henter pseudonym basert på input
-N=$(curl -s -d "$XML_PN" "$URL_PN")
+if ! N=$(curl -fsS --max-time 10 -d "$XML_PN" "$URL_PN"); then
+  echo "Kunne ikke nå pseudonym-tjenesten."
+  exit 0
+fi
 
 if er_pseudonymfeil "$N"; then
   echo "$N"
@@ -205,27 +208,27 @@ echo "BIDRAG kall til: $URL_B - handling=$H" >&2
 case "$H" in
 
   Ny)
-    SVAR=$(curl -s -X POST -d "$XML_B" "$URL_B")
+    SVAR=$(curl -fsS -X POST -d "$XML_B" "$URL_B" || true)
     skriv_svar_eller_standardmelding "$SVAR" "Bidrag lagret."
     ;;
 
   Endre)
-    SVAR=$(curl -s -X PUT -d "$XML_B" "$URL_B")
+    SVAR=$(curl -fsS -X PUT -d "$XML_B" "$URL_B" || true)
     skriv_svar_eller_standardmelding "$SVAR" "Bidrag oppdatert."
     ;;
 
   Slett)
-    SVAR=$(curl -s -X DELETE -d "$XML_B" "$URL_B")
+    SVAR=$(curl -fsS -X DELETE -d "$XML_B" "$URL_B" || true)
     skriv_svar_eller_standardmelding "$SVAR" "Bidrag slettet."
     ;;
 
   Min)
-    SVAR=$(curl -s -X POST -d "$XML_B" "$URL_B") # Person 1 bruker POST fordi GET gir 404 i dette oppsettet
+    SVAR=$(curl -fsS -X POST -d "$XML_B" "$URL_B" || true) # Person 1 bruker POST fordi GET gir 404 i dette oppsettet
     skriv_svar_eller_standardmelding "$SVAR" "Ingen data funnet for brukeren."
     ;;
 
   Admin)
-    SVAR=$(curl -s -X POST -d "$XML_B" "$URL_B")
+    SVAR=$(curl -fsS -X POST -d "$XML_B" "$URL_B" || true)
     skriv_svar_eller_standardmelding "$SVAR" "Ingen bidrag å vise."
     ;;
   *)

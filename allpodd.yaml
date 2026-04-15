@@ -2,11 +2,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: allpodd
+  name: web
   labels:
     # start: Identifikasjonsetiketter for samlet inngangspunkt - oppfyller NF6 (merking av skyverdier) (person 4)
     app: allpodd
-    component: gateway
+    component: web
     tier: edge
     security: hardened
     # slutt: Identifikasjonsetiketter for samlet inngangspunkt - oppfyller NF6 (merking av skyverdier) (person 4)
@@ -14,222 +14,102 @@ spec:
   type: NodePort
   selector:
     app: allpodd
+    component: web
   ports:
     - name: web
       nodePort: 32199
       port: 80
       targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  labels:
+    # start: Identifikasjonsetiketter for samlet inngangspunkt - oppfyller NF6 (merking av skyverdier) (person 4)
+    app: allpodd
+    component: app
+    tier: application
+    security: hardened
+    # slutt: Identifikasjonsetiketter for samlet inngangspunkt - oppfyller NF6 (merking av skyverdier) (person 4)
+spec:
+  type: NodePort
+  selector:
+    app: allpodd
+    component: app
+  ports:
     - name: app
       nodePort: 30921
       port: 81
       targetPort: 8081
 ---
 apiVersion: v1
+kind: Service
+metadata:
+  name: bidrag-db
+  labels:
+    # start: Identifikasjonsetiketter for samlet inngangspunkt - oppfyller NF6 (merking av skyverdier) (person 4)
+    app: allpodd
+    component: bidrag-db
+    tier: backend
+    security: hardened
+    # slutt: Identifikasjonsetiketter for samlet inngangspunkt - oppfyller NF6 (merking av skyverdier) (person 4)
+spec:
+  selector:
+    app: allpodd
+    component: bidrag-db
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pseudonym-db
+  labels:
+    # start: Identifikasjonsetiketter for samlet inngangspunkt - oppfyller NF6 (merking av skyverdier) (person 4)
+    app: allpodd
+    component: pseudonym-db
+    tier: backend
+    security: hardened
+    # slutt: Identifikasjonsetiketter for samlet inngangspunkt - oppfyller NF6 (merking av skyverdier) (person 4)
+spec:
+  selector:
+    app: allpodd
+    component: pseudonym-db
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083
+---
+apiVersion: v1
 kind: Pod
 metadata:
-  name: allpodd
+  name: web
   labels:
     # start: Identifikasjonsetiketter for herdede arbeidslaster - oppfyller NF6 (merking av skyverdier) (person 4)
     app: allpodd
-    component: allpodd-stack
-    tier: application
+    component: web
+    tier: edge
     security: hardened
     # slutt: Identifikasjonsetiketter for herdede arbeidslaster - oppfyller NF6 (merking av skyverdier) (person 4)
 spec:
-  # start: Dedikert servicekonto uten API-token i podden - oppfyller NF1 (least privilege og RBAC-tilnærming) (person 4)
   serviceAccountName: allpodd-sa
   automountServiceAccountToken: false
   enableServiceLinks: false
-  # slutt: Dedikert servicekonto uten API-token i podden - oppfyller NF1 (least privilege og RBAC-tilnærming) (person 4)
-  # start: Pod-nivå hardening og kontrollert nedstenging - oppfyller NF1 (defense in depth) og deler av NF7 (recovery) (person 4)
   securityContext:
     seccompProfile:
       type: RuntimeDefault
     fsGroup: 10001
   terminationGracePeriodSeconds: 10
-  # slutt: Pod-nivå hardening og kontrollert nedstenging - oppfyller NF1 (defense in depth) og deler av NF7 (recovery) (person 4)
-  # start: Init-containere som seed-er persistente databaser før oppstart - oppfyller F3 (persistens) og deler av NF7 (recovery) (person 4)
-  initContainers:
-    - name: seed-bidrag-db
-      image: localhost/bidrag-db:latest
-      imagePullPolicy: Never
-      command:
-        - sh
-        - -c
-        - |
-          if [ ! -f /data/bidrag.db ]; then
-            cp /var/www/bidrag.db /data/bidrag.db
-          fi
-          chown 10001:10001 /data/bidrag.db
-          chmod 660 /data/bidrag.db
-      volumeMounts:
-        - name: bidrag-db-data
-          mountPath: /data
-    - name: seed-pseudonym-db
-      image: localhost/pseudonym-db:latest
-      imagePullPolicy: Never
-      command:
-        - sh
-        - -c
-        - |
-          if [ ! -f /data/pseudonym.db ]; then
-            cp /var/www/pseudonym.db /data/pseudonym.db
-          fi
-          chown 10001:10001 /data/pseudonym.db
-          chmod 660 /data/pseudonym.db
-      volumeMounts:
-        - name: pseudonym-db-data
-          mountPath: /data
-  # slutt: Init-containere som seed-er persistente databaser før oppstart - oppfyller F3 (persistens) og deler av NF7 (recovery) (person 4)
   containers:
-    - name: app
-      image: localhost/app:latest
-      imagePullPolicy: Never
-      ports:
-        - containerPort: 8081
-          name: app
-      # start: Container-hardening for app-tjenesten - oppfyller NF1 (minste privilegium og defense in depth) (person 4)
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: true
-        capabilities:
-          drop:
-            - ALL
-      resources:
-        requests:
-          cpu: "50m"
-          memory: "64Mi"
-        limits:
-          cpu: "200m"
-          memory: "128Mi"
-      readinessProbe:
-        exec:
-          command: ["sh", "-c", "nc -z 127.0.0.1 8081"]
-        periodSeconds: 10
-        timeoutSeconds: 3
-      livenessProbe:
-        exec:
-          command: ["sh", "-c", "nc -z 127.0.0.1 8081"]
-        initialDelaySeconds: 15
-        periodSeconds: 20
-        timeoutSeconds: 3
-      startupProbe:
-        exec:
-          command: ["sh", "-c", "nc -z 127.0.0.1 8081"]
-        periodSeconds: 5
-        failureThreshold: 12
-      volumeMounts:
-        - name: app-tmp
-          mountPath: /tmp
-      # slutt: Container-hardening for app-tjenesten - oppfyller NF1 (minste privilegium og defense in depth) (person 4)
-    - name: bidrag-db
-      image: localhost/bidrag-db:latest
-      imagePullPolicy: Never
-      ports:
-        - containerPort: 8082
-          name: bidrag-db
-      # start: Container-hardening for bidrag-databasen - oppfyller NF1 (minste privilegium og defense in depth), F3 (persistens) og deler av NF7 (recovery) (person 4)
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: true
-        capabilities:
-          drop:
-            - ALL
-      env:
-        - name: BIDRAG_DB_PATH
-          value: /data/bidrag.db
-        - name: PSEUDONYM_INTERNAL_URL
-          value: http://127.0.0.1:8083/cgi-bin/index.cgi
-      resources:
-        requests:
-          cpu: "50m"
-          memory: "96Mi"
-        limits:
-          cpu: "250m"
-          memory: "192Mi"
-      readinessProbe:
-        exec:
-          command: ["sh", "-c", "nc -z 127.0.0.1 8082"]
-        periodSeconds: 10
-        timeoutSeconds: 3
-      livenessProbe:
-        exec:
-          command: ["sh", "-c", "nc -z 127.0.0.1 8082"]
-        initialDelaySeconds: 15
-        periodSeconds: 20
-        timeoutSeconds: 3
-      startupProbe:
-        exec:
-          command: ["sh", "-c", "nc -z 127.0.0.1 8082"]
-        periodSeconds: 5
-        failureThreshold: 12
-      volumeMounts:
-        - name: bidrag-db-data
-          mountPath: /data
-        - name: bidrag-tmp
-          mountPath: /tmp
-      # slutt: Container-hardening for bidrag-databasen - oppfyller NF1 (minste privilegium og defense in depth), F3 (persistens) og deler av NF7 (recovery) (person 4)
-    - name: pseudonym-db
-      image: localhost/pseudonym-db:latest
-      imagePullPolicy: Never
-      ports:
-        - containerPort: 8083
-          name: pseudonym-db
-      # start: Container-hardening for pseudonym-databasen - oppfyller NF1 (minste privilegium og defense in depth), F3 (persistens) og deler av NF7 (recovery) (person 4)
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: true
-        capabilities:
-          drop:
-            - ALL
-      env:
-        - name: PSEUDONYM_DB_PATH
-          value: /data/pseudonym.db
-      resources:
-        requests:
-          cpu: "25m"
-          memory: "64Mi"
-        limits:
-          cpu: "150m"
-          memory: "128Mi"
-      readinessProbe:
-        exec:
-          command: ["sh", "-c", "nc -z 127.0.0.1 8083"]
-        periodSeconds: 10
-        timeoutSeconds: 3
-      livenessProbe:
-        exec:
-          command: ["sh", "-c", "nc -z 127.0.0.1 8083"]
-        initialDelaySeconds: 15
-        periodSeconds: 20
-        timeoutSeconds: 3
-      startupProbe:
-        exec:
-          command: ["sh", "-c", "nc -z 127.0.0.1 8083"]
-        periodSeconds: 5
-        failureThreshold: 12
-      volumeMounts:
-        - name: pseudonym-db-data
-          mountPath: /data
-        - name: pseudonym-tmp
-          mountPath: /tmp
-      # slutt: Container-hardening for pseudonym-databasen - oppfyller NF1 (minste privilegium og defense in depth), F3 (persistens) og deler av NF7 (recovery) (person 4)
     - name: web
       image: localhost/web:latest
       imagePullPolicy: Never
       ports:
         - containerPort: 8080
           name: web
-      # start: Container-hardening for web-frontend - oppfyller NF1 (minste privilegium og defense in depth) (person 4)
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -265,22 +145,227 @@ spec:
       volumeMounts:
         - name: web-tmp
           mountPath: /tmp
-      # slutt: Container-hardening for web-frontend - oppfyller NF1 (minste privilegium og defense in depth) (person 4)
-  # start: PVC-er og isolerte tmp-volumer for skrivebehov - oppfyller F3 (persistens), NF1 (read-only root filesystem) og deler av NF7 (recovery) (person 4)
+  volumes:
+    - name: web-tmp
+      emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app
+  labels:
+    # start: Identifikasjonsetiketter for herdede arbeidslaster - oppfyller NF6 (merking av skyverdier) (person 4)
+    app: allpodd
+    component: app
+    tier: application
+    security: hardened
+    # slutt: Identifikasjonsetiketter for herdede arbeidslaster - oppfyller NF6 (merking av skyverdier) (person 4)
+spec:
+  serviceAccountName: allpodd-sa
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+    fsGroup: 10001
+  terminationGracePeriodSeconds: 10
+  containers:
+    - name: app
+      image: localhost/app:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 8081
+          name: app
+      env:
+        - name: URL_B_INTERNAL
+          value: http://bidrag-db:8082/cgi-bin/index.cgi
+        - name: URL_PN_INTERNAL
+          value: http://pseudonym-db:8083/cgi-bin/index.cgi
+        - name: APP_ALLOWED_ORIGIN
+          value: http://localhost:8080
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "200m"
+          memory: "128Mi"
+      readinessProbe:
+        exec:
+          command: ["sh", "-c", "nc -z 127.0.0.1 8081"]
+        periodSeconds: 10
+        timeoutSeconds: 3
+      livenessProbe:
+        exec:
+          command: ["sh", "-c", "nc -z 127.0.0.1 8081"]
+        initialDelaySeconds: 15
+        periodSeconds: 20
+        timeoutSeconds: 3
+      startupProbe:
+        exec:
+          command: ["sh", "-c", "nc -z 127.0.0.1 8081"]
+        periodSeconds: 5
+        failureThreshold: 12
+      volumeMounts:
+        - name: app-tmp
+          mountPath: /tmp
+  volumes:
+    - name: app-tmp
+      emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bidrag-db
+  labels:
+    # start: Identifikasjonsetiketter for herdede arbeidslaster - oppfyller NF6 (merking av skyverdier) (person 4)
+    app: allpodd
+    component: bidrag-db
+    tier: backend
+    security: hardened
+    # slutt: Identifikasjonsetiketter for herdede arbeidslaster - oppfyller NF6 (merking av skyverdier) (person 4)
+spec:
+  serviceAccountName: allpodd-sa
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+    fsGroup: 10001
+  terminationGracePeriodSeconds: 10
+  initContainers:
+    - name: seed-bidrag-db
+      image: localhost/bidrag-db:latest
+      imagePullPolicy: Never
+      command:
+        - sh
+        - -c
+        - |
+          if [ ! -f /data/bidrag.db ]; then
+            cp /var/www/bidrag.db /data/bidrag.db
+          fi
+          chown 10001:10001 /data/bidrag.db
+          chmod 660 /data/bidrag.db
+      volumeMounts:
+        - name: bidrag-db-data
+          mountPath: /data
+  containers:
+    - name: bidrag-db
+      image: localhost/bidrag-db:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 8082
+          name: bidrag-db
+      env:
+        - name: BIDRAG_DB_PATH
+          value: /data/bidrag.db
+        - name: PSEUDONYM_INTERNAL_URL
+          value: http://pseudonym-db:8083/cgi-bin/index.cgi
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "96Mi"
+        limits:
+          cpu: "250m"
+          memory: "192Mi"
+      volumeMounts:
+        - name: bidrag-db-data
+          mountPath: /data
+        - name: bidrag-tmp
+          mountPath: /tmp
   volumes:
     - name: bidrag-db-data
       persistentVolumeClaim:
         claimName: bidrag-pvc
+    - name: bidrag-tmp
+      emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pseudonym-db
+  labels:
+    # start: Identifikasjonsetiketter for herdede arbeidslaster - oppfyller NF6 (merking av skyverdier) (person 4)
+    app: allpodd
+    component: pseudonym-db
+    tier: backend
+    security: hardened
+    # slutt: Identifikasjonsetiketter for herdede arbeidslaster - oppfyller NF6 (merking av skyverdier) (person 4)
+spec:
+  serviceAccountName: allpodd-sa
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+    fsGroup: 10001
+  terminationGracePeriodSeconds: 10
+  initContainers:
+    - name: seed-pseudonym-db
+      image: localhost/pseudonym-db:latest
+      imagePullPolicy: Never
+      command:
+        - sh
+        - -c
+        - |
+          if [ ! -f /data/pseudonym.db ]; then
+            cp /var/www/pseudonym.db /data/pseudonym.db
+          fi
+          chown 10001:10001 /data/pseudonym.db
+          chmod 660 /data/pseudonym.db
+      volumeMounts:
+        - name: pseudonym-db-data
+          mountPath: /data
+  containers:
+    - name: pseudonym-db
+      image: localhost/pseudonym-db:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 8083
+          name: pseudonym-db
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+      resources:
+        requests:
+          cpu: "25m"
+          memory: "64Mi"
+        limits:
+          cpu: "150m"
+          memory: "128Mi"
+      volumeMounts:
+        - name: pseudonym-db-data
+          mountPath: /data
+        - name: pseudonym-tmp
+          mountPath: /tmp
+  volumes:
     - name: pseudonym-db-data
       persistentVolumeClaim:
         claimName: pseudonym-pvc
-    - name: app-tmp
-      emptyDir: {}
-    - name: bidrag-tmp
-      emptyDir: {}
     - name: pseudonym-tmp
       emptyDir: {}
-    - name: web-tmp
-      emptyDir: {}
-  # slutt: PVC-er og isolerte tmp-volumer for skrivebehov - oppfyller F3 (persistens), NF1 (read-only root filesystem) og deler av NF7 (recovery) (person 4)
 # slutt: Herdet service- og podmanifest for steg 8 - oppfyller NF1 (least privilege og defense in depth), NF2 (Kubernetes), NF3 (lokal kjøring) og deler av NF7 (recovery) (person 4)
