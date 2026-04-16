@@ -109,7 +109,7 @@ spec:
             - name: URL_PN_INTERNAL
               value: http://pseudonym-db.pseudonymrom.svc.cluster.local:8083/cgi-bin/index.cgi
             - name: APP_ALLOWED_ORIGIN
-              value: http://localhost:8080
+              value: https://localhost:4430
           securityContext:
             runAsNonRoot: true
             runAsUser: 10001
